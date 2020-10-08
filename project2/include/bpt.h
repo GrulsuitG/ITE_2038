@@ -42,7 +42,8 @@
  * of the value field.
  */
 typedef struct record {
-    int value;
+    long key;
+    char *value;
 } record;
 
 /* Type representing a node in the B+ tree.
