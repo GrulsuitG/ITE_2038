@@ -15,7 +15,6 @@ TARGET_OBJ:=$(SRCDIR)main.o
 
 # Include more files if you write another source file.
 SRCS_FOR_LIB:=$(SRCDIR)bpt.c
-SRCS_FOR_LIB:=$(SRCDIR)file.c
 OBJS_FOR_LIB:=$(SRCS_FOR_LIB:.c=.o)
 
 CFLAGS+= -g -fPIC -I $(INC)
