@@ -55,7 +55,7 @@
 #include "bpt.h"
 #include "file.h"
 #include "type.h"
-
+#include "index.h"
 // GLOBALS.
 
 /* The order determines the maximum and minimum
@@ -155,7 +155,7 @@ void print_leaves( node * root ) {
         for (i = 0; i < c->num_keys; i++) {
             if (verbose_output)
                 printf("%lx ", (unsigned long)c->pointers[i]);
-            printf("%id ", c->keys[i]);
+            printf("%ld ", c->keys[i]);
         }
         if (verbose_output)
             printf("%lx ", (unsigned long)c->pointers[order - 1]);
@@ -268,11 +268,11 @@ void find_and_print(node * root, int64_t key, bool verbose) {
 /* Finds and prints the keys, pointers, and values within a range
  * of keys between key_start and key_end, including both bounds.
  */
-void find_and_print_range( node * root, int64_t key_start, int key_end,
+void find_and_print_range( node * root, int64_t key_start, int64_t key_end,
         bool verbose ) {
     int i;
     int array_size = key_end - key_start + 1;
-    int returned_keys[array_size];
+    int64_t returned_keys[array_size];
     void * returned_pointers[array_size];
     int num_found = find_range( root, key_start, key_end, verbose,
             returned_keys, returned_pointers );
@@ -294,8 +294,8 @@ void find_and_print_range( node * root, int64_t key_start, int key_end,
  * returned_keys and returned_pointers, and returns the number of
  * entries found.
  */
-int find_range( node * root, int64_t key_start, int key_end, bool verbose,
-        int returned_keys[], void * returned_pointers[]) {
+int find_range( node * root, int64_t key_start, int64_t key_end, bool verbose,
+        int64_t returned_keys[], void * returned_pointers[]) {
     int i, num_found;
     num_found = 0;
     node * n = find_leaf( root, key_start, verbose );
@@ -392,7 +392,7 @@ record * make_record(char* value) {
         exit(EXIT_FAILURE);
     }
     new_record->value = (char*)malloc(sizeof(char) *VALUE_SIZE);
-    if( new_record->vlaue == NULL){
+    if( new_record->value == NULL){
         perror("Record value creation.");
         exit(EXIT_FAILURE);
     }
@@ -759,7 +759,7 @@ node * start_new_tree(int64_t key, record * pointer) {
  * however necessary to maintain the B+ tree
  * properties.
  */
-node * insert( node * root, int64_t key, int value ) {
+node * insert( node * root, int64_t key, char* value ) {
 
     record * pointer;
     node * leaf;
@@ -921,7 +921,7 @@ node * adjust_root(node * root) {
  * can accept the additional entries
  * without exceeding the maximum.
  */
-node * coalesce_nodes(node * root, node * n, node * neighbor, int neighbor_index, int k_prime) {
+node * coalesce_nodes(node * root, node * n, node * neighbor, int neighbor_index, int64_t k_prime) {
 
     int i, j, neighbor_insertion_index, n_end;
     node * tmp;

@@ -25,7 +25,7 @@ int db_insert(int64_t key, char* value){
     page_t *page = init_page_t();
     pagenum_t pagenum;
     
-    n = finde_leaf(root, key, false);
+    n = find_leaf(root, key, false);
     if( n != NULL ){
         printf("the key %ld is already exist\n", key);    
         return -1;
@@ -70,10 +70,11 @@ int db_find(int64_t key, char *ret_val){
 int db_delete(int64_t key){
     node *n;
     page_t *page= init_page_t();
+    pagenum_t pagenum;
     n= find_leaf(root, key, false);
     if(n == NULL){
         printf("the key: %ld is not exist\n", key);
-        return -;1
+        return -1;
     }
     delete(root, key);
 
@@ -140,7 +141,7 @@ pagenum_t node_to_page(node* n, page_t* page){
 }
 
 void page_to_node(page_t* page,node* n, pagenum_t pagenum){
-    if(page->is_leaf)
+    if(page->isLeaf)
         n = make_leaf();
     else
         n = make_node();
@@ -186,9 +187,8 @@ node* deQ(){
 }
 
 node* syncFileAndTree(){
-    int i;
-    node* parent, child;
-    page_t* parentpage, childpage;
+    node *parent, *child;
+    page_t *parentpage, *childpage;
     
     root = destroy_tree(root);
     
@@ -197,17 +197,17 @@ node* syncFileAndTree(){
         return root;
 
     file_read_page(parentpage->rootPageNum, parentpage);
-    page_to_node(page, root, parentpage->rootPageNum);
-    enqueue(root)
+    page_to_node(parentpage, root, parentpage->rootPageNum);
+    enQ(root);
     
     while ( Q != NULL){
         parent= dequeue();
-        if(!n->is_leaf){
-            for(i =0; i<parent->num_keys+1; i++){
+        if(!parent->is_leaf){
+            for(int i =0; i<parent->num_keys+1; i++){
                 file_read_page(parentpage->inter_info[i]->pagenum, childpage);
                 page_to_node(childpage, child, parentpage->inter_info[i]->pagenum);
                 parent->pointers[i] = child;
-                enqueue(child);
+                enQ(child);
             }    
         }
     }
