@@ -54,7 +54,7 @@
 
 #include "bpt.h"
 #include "file.h"
-#include "index.h"
+#include "type.h"
 
 // GLOBALS.
 
@@ -218,7 +218,7 @@ void print_tree( node * root ) {
                 enqueue(n->pointers[i]);
         if (verbose_output) {
             if (n->is_leaf) 
-                printf("%lx ", (unsigned long)n->pointers[order - 1]);
+                printf("%lx ", (unsigned long)n->pointers[LEAF_ORDER - 1]);
             else
                 printf("%lx ", (unsigned long)n->pointers[n->num_keys]);
         }

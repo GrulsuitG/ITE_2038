@@ -112,11 +112,6 @@ extern bool verbose_output;
 
 // Output and utility.
 
-void license_notice( void );
-void print_license( int licence_part );
-void usage_1( void );
-void usage_2( void );
-void usage_3( void );
 void enqueue( node * new_node );
 node * dequeue( void );
 int height( node * root );
@@ -125,8 +120,8 @@ void print_leaves( node * root );
 void print_tree( node * root );
 void find_and_print(node * root, int64_t key, bool verbose); 
 void find_and_print_range(node * root, int64_t range1, int64_t range2, bool verbose); 
-int find_range( node * root, int64_t key_start, int64_t key_end, bool verbose,
-        int64_t returned_keys[], void * returned_pointers[]); 
+int find_range( node * root, int64_t key_start, int64_t key_end,
+        bool verbose, int64_t returned_keys[], void * returned_pointers[]); 
 node * find_leaf( node * root, int64_t key, bool verbose );
 record * find( node * root, int64_t key, bool verbose );
 int cut( int length );

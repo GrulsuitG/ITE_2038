@@ -18,6 +18,8 @@ int db_find(int64_t key, char* ret_val);
 int db_delete(int64_t key);
 pagenum_t node_to_page(node* node, page_t* page);
 
+void page_to_node(page_t* page, node* n);
 void enQ(node* n);
 node* deQ();
 
+node* syncFileAndTree();
