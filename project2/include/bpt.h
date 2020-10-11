@@ -111,7 +111,7 @@ extern bool verbose_output;
 // FUNCTION PROTOTYPES.
 
 // Output and utility.
-
+void usage_2();
 void enqueue( node * new_node );
 node * dequeue( void );
 int height( node * root );
