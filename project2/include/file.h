@@ -4,13 +4,28 @@
 #define PAGE_SIZE 4096
 #define DEFAULT_FREE_PAGE 10
 #define VALUE_SIZE 120
+#define LEAF_ORDER 32
+#define INTERNAL_ORDER 248
 
+#include<stdio.h>
+#include<stdlib.h>
 #include<stdint.h>
 #include<fcntl.h>
 #include<unistd.h>
-#include<type.h>
 
 
+typedef uint64_t pagenum_t;
+
+typedef struct record {
+    int64_t key;
+    char* value;
+}record;
+
+
+typedef struct inter_record{
+    int64_t key;
+    pagenum_t pagenum;
+}inter_record;
 
 typedef struct page_t{
 	pagenum_t freePageNum;

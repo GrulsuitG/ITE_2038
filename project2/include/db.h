@@ -1,13 +1,13 @@
 #ifndef __INDEX_H__
 #define __INDEX_H__
-#include"type.h"
+
 #include"bpt.h"
 #include"file.h"
 #include<string.h>
 
 #define MAX_TABLE_NUM 100
 
-int unique_id = 0
+int unique_id;
 ;
 char* table_name[MAX_TABLE_NUM];
 node* root;

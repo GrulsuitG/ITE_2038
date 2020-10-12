@@ -1,12 +1,15 @@
-#include "index.h"
+#include "db.h"
 
 
 int open_table(char *pathname){ 
     int i;
     filename = pathname;
-    
     root = syncFileAndTree();
-
+	
+    if(table_name[0] == NULL){
+        unique_id =0;
+    }
+		
     for(i=0; i<unique_id; i++){
         if( strcmp(pathname, table_name[i]) == 0)
             return i;

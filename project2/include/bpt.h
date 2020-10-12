@@ -3,9 +3,13 @@
 
 // Uncomment the line below if you are compiling on Windows.
 // #define WINDOWS
+#include<stdio.h>
+#include<stdlib.h>
 #include <stdbool.h>
-#include "type.h"
+#include<stdint.h>
 #include "file.h"
+
+
 #ifdef WINDOWS
 #define bool char
 #define false 0
@@ -41,6 +45,8 @@
  * to change the type and content
  * of the value field.
  */
+
+
 
 /* Type representing a node in the B+ tree.
  * This type is general enough to serve for both
