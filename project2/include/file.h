@@ -7,11 +7,16 @@
 #define LEAF_ORDER 32
 #define INTERNAL_ORDER 248
 
+
+
 #include<stdio.h>
 #include<stdlib.h>
 #include<stdint.h>
 #include<fcntl.h>
 #include<unistd.h>
+#ifndef O_DIRECT
+#define O_DIRECT 00040000
+#endif
 
 
 typedef uint64_t pagenum_t;

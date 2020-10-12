@@ -4,7 +4,7 @@
 
 int main( int argc, char ** argv ) {
     char instruction;
-    char* str;
+    char* str = (char*)malloc(sizeof(char)*VALUE_SIZE);
     int64_t key, range2;
     
     printf("> ");
@@ -12,19 +12,26 @@ int main( int argc, char ** argv ) {
         switch (instruction) {
         case 'd':
             scanf("%ld", &key);
-            root = delete(root, key);
-            print_tree(root);
+            if(!db_delete(key))
+                print_tree(root);
+            else
+                printf("delete fail\n");
             break;
         case 'i':
             scanf("%ld", &key);
             scanf("%s", str);
-            root = insert(root, key, str);
-            print_tree(root);
+            if(!db_insert(key, str))
+                print_tree(root);
+            else
+                printf("insert fail\n");
             break;
         case 'f':
         case 'p':
             scanf("%ld", &key);
-            find_and_print(root, key, instruction == 'p');
+            if(!db_find(key, str))
+                printf("%s\n", str);
+            else
+                printf("find fail\n");
             break;
         case 'r':
             scanf("%ld %ld", &key, &range2);
@@ -53,6 +60,12 @@ int main( int argc, char ** argv ) {
                 root = destroy_tree(root);
             print_tree(root);
             break;
+        case 'o':
+            scanf("%s", str);
+		//printf("%s\n", str);
+            open_table(str);
+	    break;
+        
         default:
             usage_2();
             break;

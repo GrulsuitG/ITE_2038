@@ -54,8 +54,7 @@
 
 #include "bpt.h"
 #include "file.h"
-#include "type.h"
-#include "index.h"
+#include "db.h"
 // GLOBALS.
 
 /* The order determines the maximum and minimum

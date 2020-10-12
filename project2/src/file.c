@@ -1,43 +1,59 @@
 #include "file.h"
 
+//char* filename = (char*)malloc (sizeof(char)* 100);
 char* filename;
 
 pagenum_t file_alloc_page(){
 	pagenum_t pagenum;
 	page_t* header=init_page_t();
 	int fd;
-	char* store_info = (char*) malloc(sizeof(pagenum_t));
+	void* store_info =  malloc(sizeof(pagenum_t));
 	file_read_page(0,header);
 	
 	
-	if((fd=open(filename, O_RDWR|O_EXCL|O_SYNC)) ==-1){
-		fprintf(stderr, "file open error for alloc\n");
-		exit(1);
+	if((fd=open(filename, O_RDWR|O_EXCL|O_SYNC|O_DIRECT)) <0){
+	    perror("file open error for alloc");
+		exit(EXIT_FAILURE);
 	}
 	lseek(fd,PAGE_SIZE*header->freePageNum,SEEK_SET);
-	read(fd, store_info, sizeof(pagenum_t));
+	if(read(fd, store_info, sizeof(pagenum_t)) < 0){
+        perror("file read error for alloc");
+        exit(EXIT_FAILURE);
+    }
 	if(store_info == 0){
 	
 		globalpagenum = header->numOfPage+1;
 		lseek(fd,0,SEEK_END);
 		
-		truncate(filename,PAGE_SIZE*(header->numOfPage+11));
+		if(truncate(filename,PAGE_SIZE*(header->numOfPage+11))<0){
+            perror("file truncate error for alloc");
+            exit(EXIT_FAILURE);
+        }
 		
 		for(int i =0 ; i<DEFAULT_FREE_PAGE; i++){
-			sprintf(store_info,"%lu", ++globalpagenum);
-			write(fd,store_info, sizeof(pagenum_t));
+			globalpagenum++;
+            if(write(fd,+globalpagenum, sizeof(pagenum_t))< 0){
+                perror("file write error for alloc");
+                exit(EXIT_FAILURE);
+            }
 			lseek(fd, PAGE_SIZE-sizeof(pagenum_t), SEEK_CUR);
 		}
-		sprintf(store_info,"%d", 0);
-		write(fd,store_info, sizeof(pagenum_t));
+		if(write(fd,0, sizeof(pagenum_t)) < 0){
+            perror("file write error for alloc");
+            exit(EXIT_FAILURE);
+        }
 		
 		
 		lseek(fd, 0, SEEK_SET);
-		sprintf(store_info,"%lu", 1+header->numOfPage);
-		write(fd,store_info, sizeof(pagenum_t));
+		if(write(fd,(void*)header->numOfPage+1, sizeof(pagenum_t))<0){
+            perror("file write error for alloc");
+            exit(EXIT_FAILURE);
+        }
 		lseek(fd, sizeof(pagenum_t), SEEK_CUR);
-		sprintf(store_info, "%lu",globalpagenum);
-		write(fd, store_info,sizeof(pagenum_t));
+		if(write(fd, (void*)globalpagenum,sizeof(pagenum_t)) <0){
+            perror("file write error for alloc");
+            exit(EXIT_FAILURE);
+        }
         
         close(fd);
         return header->freePageNum;
@@ -52,9 +68,12 @@ pagenum_t file_alloc_page(){
 
 void file_free_page(pagenum_t pagenum){
 	int fd;
-	char *read_info = (char*)malloc(sizeof(pagenum_t));
+	void *read_info = malloc(sizeof(pagenum_t));
 	
-	fd = open(filename, O_RDWR);
+	if((fd = open(filename, O_RDWR|O_SYNC|O_DIRECT)) < 0){
+        perror("file open error for free");
+        exit(EXIT_FAILURE);
+    }
 	
     /*
 	//move the pagenum and reset
@@ -63,43 +82,52 @@ void file_free_page(pagenum_t pagenum){
 	*/
 	//find first free page
 	lseek(fd, 0, SEEK_SET);
-	read(fd, read_info, sizeof(pagenum_t));
+	if(read(fd, read_info, sizeof(pagenum_t)) < 0){
+        perror("file read error for free");
+        exit(EXIT_FAILURE);
+    }
 	
 	//move the reseted page and write the frist free page
 	lseek(fd, pagenum*PAGE_SIZE, SEEK_SET);
-	write(fd, read_info, sizeof(pagenum_t));
+	if(write(fd, read_info, sizeof(pagenum_t)) < 0){
+        perror("file write error for free");
+        exit(EXIT_FAILURE);
+    }
 	
 	//write the reseted page number at first free page 
 	lseek(fd, 0, SEEK_SET);
-	sprintf(read_info, "%lu", pagenum);
-	write(fd, read_info, sizeof(pagenum_t));
+	if(write(fd, (void*)pagenum, sizeof(pagenum_t)) < 0){
+        perror("file write error for free");
+        exit(EXIT_FAILURE);
+    }
 	
 }
 
 void file_read_page(pagenum_t pagenum, page_t* dest){
 	int fd,isExist;
-	char *read_info = (char*)malloc(sizeof(pagenum_t));
+	void *read_info = malloc(sizeof(pagenum_t));
 	
-	isExist = access(filename, 00);
-
-	/*if there is not a file
-	  make a file & initailize the file
-	  make a head page and default free page*/
-	if (isExist == -1){
-		make_file();
-	}
-	fd = open(filename, O_RDONLY);
-	if(fd<0){
-		fprintf(stderr, "file open error for read\n");
-		exit(1);
+	
+	if((fd = open(filename, O_RDONLY)) < 0){
+		perror("file open error for read");
+		exit(EXIT_FAILURE);
 	}
 	// default read the head page
 	lseek(fd, 0, SEEK_SET);
-	read(fd, read_info, sizeof(pagenum_t));
+	if(read(fd, read_info, sizeof(pagenum_t)) < 0){
+        perror("file read error for read");
+        exit(EXIT_FAILURE);
+    }
 	dest->freePageNum = atoi(read_info);
-	read(fd, read_info, sizeof(pagenum_t));
+	if(read(fd, read_info, sizeof(pagenum_t)) < 0){
+        perror("file read error for read");
+        exit(EXIT_FAILURE);
+    }
 	dest->rootPageNum = atoi(read_info);
-	read(fd, read_info, sizeof(pagenum_t));
+	if(read(fd, read_info, sizeof(pagenum_t)) < 0){
+        perror("file read error for read");
+        exit(EXIT_FAILURE);
+    }
 	dest->numOfPage = atoi(read_info);
 	
 
@@ -112,31 +140,55 @@ void file_read_page(pagenum_t pagenum, page_t* dest){
 	//move the pagenum and read page header
 	else{
 		lseek(fd, pagenum*PAGE_SIZE,SEEK_SET);
-		read(fd, read_info, sizeof(pagenum_t));
+		if(read(fd, read_info, sizeof(pagenum_t)) < 0){
+        perror("file read error for read");
+        exit(EXIT_FAILURE);
+    }
 		dest->parentPageNum = atoi(read_info);
-		read(fd, read_info, sizeof(int));
+		if(read(fd, read_info, sizeof(int)) < 0){
+        perror("file read error for read");
+        exit(EXIT_FAILURE);
+    };
 		dest->isLeaf =atoi(read_info);
-		read(fd,read_info, sizeof(int));
+		if(read(fd, read_info, sizeof(int)) < 0){
+        perror("file read error for read");
+        exit(EXIT_FAILURE);
+    }
 		dest->numOfKey = atoi(read_info);
 		lseek(fd, PAGE_SIZE*pagenum + 120, SEEK_SET);
-		read(fd, read_info, sizeof(pagenum_t));
+		if(read(fd, read_info, sizeof(pagenum_t)) < 0){
+        perror("file read error for read");
+        exit(EXIT_FAILURE);
+    }
 		dest->rightSibling = atoi(read_info);
 
 		if(dest->isLeaf == 1){
 			for(int i=0; i<dest->numOfKey; i++){
-				read(fd, read_info,sizeof(uint64_t));
+				if(read(fd, read_info, sizeof(int64_t)) < 0){
+                    perror("file read error for read");
+                    exit(EXIT_FAILURE);
+                 }
 				dest->info[i]->key= atoi(read_info);
 				
-				read(fd, dest->info[i]->value, sizeof(char)*VALUE_SIZE);
+				if(read(fd, dest->info[i]->value, sizeof(char)*VALUE_SIZE) < 0){
+					perror("file read error for read");
+					exit(EXIT_FAILURE);
+				}
 			}
 		}
 
 		else{
 			for(int i=0; i<dest->numOfKey; i++){
-				read(fd, read_info, sizeof(uint64_t));
+				if(read(fd, read_info, sizeof(int64_t)) < 0){
+                    perror("file read error for read");
+                    exit(EXIT_FAILURE);
+                }
 				dest->inter_info[i]->key = atoi(read_info);
 				
-				read(fd, read_info, sizeof(pagenum_t));
+				if(read(fd, read_info, sizeof(pagenum_t)) < 0){
+                    perror("file read error for read");
+                    exit(EXIT_FAILURE);
+                }
 				dest->inter_info[i]->pagenum = atoi(read_info);
 			}
 		}
@@ -149,15 +201,15 @@ void file_read_page(pagenum_t pagenum, page_t* dest){
 
 void file_write_page(pagenum_t pagenum, const page_t* src){
 	int fd;
-	char* store_info = (char*)malloc(sizeof(pagenum_t));
+	void *store_info = malloc(sizeof(pagenum_t));
 	
 	page_t* header = init_page_t();
 
 	file_read_page(0, header);
 
-	if((fd=open(filename, O_WRONLY|O_APPEND|O_SYNC))== -1){
-		fprintf(stderr, "file open error for write\n");
-		exit(1);
+	if((fd=open(filename, O_WRONLY|O_APPEND|O_SYNC|O_DIRECT)) < 0){
+		perror("file open error for write");
+		exit(EXIT_FAILURE);
 	}
     /*
 	if(pagenum == header->freePageNum){
@@ -168,12 +220,20 @@ void file_write_page(pagenum_t pagenum, const page_t* src){
 	
 	//if the pagenum is 0, that is headpage
 	if(pagenum ==0){
-		sprintf(store_info, "%lu", src->freePageNum);
-		write(fd, store_info, sizeof(pagenum_t));
-		sprintf(store_info, "%lu", src->rootPageNum);
-		write(fd, store_info, sizeof(pagenum_t));
-		sprintf(store_info, "%lu", src->numOfPage);
-		write(fd, store_info, sizeof(uint64_t));
+		
+		if(write(fd, (void*)src->freePageNum, sizeof(pagenum_t)) < 0){
+		    perror("file write error for write");
+            exit(EXIT_FAILURE);
+        }
+		if(write(fd, (void*)src->rootPageNum, sizeof(pagenum_t)) < 0){
+            perror("file write error for write");
+            exit(EXIT_FAILURE);
+        }
+		
+		if(write(fd, (void*) src->numOfPage, sizeof(pagenum_t)) < 0){
+            perror("file write error for write");
+            exit(EXIT_FAILURE);
+        }
 		
 		free(store_info);
 		close(fd);
@@ -181,72 +241,112 @@ void file_write_page(pagenum_t pagenum, const page_t* src){
 	//move the pagenum and write page header
 	else{
 		lseek(fd,PAGE_SIZE*pagenum,SEEK_SET);
-		sprintf(store_info, "%lu", src->parentPageNum);
-		write(fd, store_info, sizeof(pagenum_t));
+		//sprintf(store_info, "%lu", src->parentPageNum);
+		if(write(fd, (void*)src->parentPageNum, sizeof(pagenum_t)) < 0){
+            perror("file write error for write");
+            exit(EXIT_FAILURE);
+        }
 		
-		sprintf(store_info, "%d", src->isLeaf);
-		write(fd, store_info, sizeof(int));
-		
-		sprintf(store_info, "%d", src->numOfKey);
-		write(fd,store_info, sizeof(int));
-		
-		lseek(fd, PAGE_SIZE*pagenum + 120, SEEK_SET);
-		sprintf(store_info, "%lu", sizeof(pagenum_t));
-		write(fd, store_info, sizeof(pagenum_t));
+        if(write(fd, (void*)src->isLeaf, sizeof(int)) < 0){
+            perror("file write error for write");
+            exit(EXIT_FAILURE);
+        }
 
-		if(src->isLeaf == 1){
-			
+		if(write(fd,(void*)src->numOfKey, sizeof(int)) < 0){
+            perror("file write error for write");
+            exit(EXIT_FAILURE);
+        }
+		
+        lseek(fd, PAGE_SIZE*pagenum + 120, SEEK_SET);
+		if(write(fd, (void*)src->rightSibling, sizeof(pagenum_t)) < 0){
+            perror("file write error for write");
+            exit(EXIT_FAILURE);
+        }
+		
+        if(src->isLeaf == 1){	
 			for(int i=0; i<src->numOfKey; i++){
-				sprintf(store_info, "%lu", src->info[i]->key);
-				write(fd, store_info,sizeof(uint64_t));
-			
-				write(fd, src->info[i]->value,sizeof(char)*VALUE_SIZE);
-			}
-		}
-
+			    if(write(fd, (void*)src->info[i]->key,sizeof(int64_t)) < 0){
+                   perror("file write error for write");
+                   exit(EXIT_FAILURE);
+                }
+				if(write(fd, src->info[i]->value,sizeof(char)*VALUE_SIZE) < 0){ 
+                    perror("file write error for write");
+                    exit(EXIT_FAILURE);
+                }
+		    }
+        }
 		else{
 			for(int i=0; i<INTERNAL_ORDER; i++){
-				sprintf(store_info, "%lu", src->inter_info[i]->key);
-				write(fd, store_info,sizeof(uint64_t));
-				
-				sprintf(store_info, "%lu", src->inter_info[i]->pagenum);
-				write(fd, store_info,sizeof(pagenum_t));
-			}
-		}
-	}
+				if(write(fd, (void*)src->inter_info[i]->key, sizeof(int64_t)) <0){
+			        perror("file write error for write");
+                    exit(EXIT_FAILURE);
+                }
+				if(write(fd, (void*)src->inter_info[i]->pagenum, sizeof(pagenum_t)) <0){
+                    perror("file write error for write");
+                    exit(EXIT_FAILURE);
+                }
+
+		    }
+	    }
+    }
 	free(store_info);
 	close(fd);
 }
 
 void make_file(){
-	int fd;
-	char* store_info =(char*) malloc(sizeof(pagenum_t));
+	int fd, isExist;
+    pagenum_t pagenum, num;
+	isExist = access(filename, 00);
 
-	if((fd = open(filename,O_RDWR|O_CREAT,0644)) ==-1){
-		fprintf(stderr, "make file error\n");
-		exit(1);
+	/*if there is not a file
+	  make a file & initailize the file
+	  make a head page and default free page*/
+	if (isExist != -1){
+		return;
 	}
-	truncate(filename, 12*PAGE_SIZE);
-	globalpagenum = 1;
+
+
+	if((fd = open(filename,O_RDWR|O_CREAT,0644)) < 0){
+		perror("make file error");
+		exit(EXIT_FAILURE);
+	}
+	if(truncate(filename, 12*PAGE_SIZE) < 0){
+        perror("file truncate error for make");
+    }
+	pagenum = 1;
 
 	lseek(fd, PAGE_SIZE, SEEK_SET);
 	for(int i=0; i<DEFAULT_FREE_PAGE; i++){
-		sprintf(store_info,"%lu",++globalpagenum);
-		write(fd, store_info, sizeof(pagenum_t));
+		pagenum++;		
+		if(write(fd, &pagenum, sizeof(pagenum_t)) < 0 ){
+            perror("file write error1 for make");
+            exit(EXIT_FAILURE);
+        }
+        fsync(fd);
 		lseek(fd, PAGE_SIZE-sizeof(pagenum_t), SEEK_CUR);
-
 	}
-	sprintf(store_info,"%d", 0);
-	write(fd, store_info, sizeof(pagenum_t));
-
+	num =0;
+	if(write(fd, &num, sizeof(pagenum_t)) < 0){
+        perror("file write error2 for make");
+        exit(EXIT_FAILURE);
+    }
 
 	lseek(fd, 0 , SEEK_SET);
-	sprintf(store_info,"1" );
-	write(fd, store_info, sizeof(pagenum_t));
-	sprintf(store_info,"0");
-	write(fd, store_info, sizeof(pagenum_t));
-	sprintf(store_info,"%lu", globalpagenum+1);
-	write(fd, store_info, sizeof(pagenum_t));
+    num = 1;
+	if(write(fd, &num, sizeof(pagenum_t)) < 0){
+        perror("file write error3 for make");
+        exit(EXIT_FAILURE);
+    }
+    num = 0;
+	if(write(fd, &num, sizeof(pagenum_t)) < 0){
+        perror("file write error4 for make");
+        exit(EXIT_FAILURE);
+    }
+    pagenum++;
+	if(write(fd, &pagenum, sizeof(pagenum_t)) < 0){
+        perror("file write error5 for make");
+        exit(EXIT_FAILURE);
+    }
 
 	close(fd);
 
@@ -255,22 +355,40 @@ page_t* init_page_t(){
 	page_t *page;
 	
 	page = (page_t*) malloc(sizeof(page_t));
-	return page;
+	if( page == NULL){
+        perror("page creation for init");
+        exit(EXIT_FAILURE);
+    }
+    
+    return page;
 }
 
 void init_info(page_t *page){
 	for(int i =0; i<LEAF_ORDER; i++){
 		page->info[i] = (record*)malloc(sizeof(record));
+        if(page->info[i] == NULL){
+            perror("page info creation for init.");
+            exit(EXIT_FAILURE);
+        }
 	}
 	
 	for(int i= 0 ; i<LEAF_ORDER; i++){
 		page->info[i]->value = (char*)malloc(sizeof(char)*VALUE_SIZE);
-	}
+	    if(page->info[i]->value == NULL){
+            perror("page info value creation for init.");
+            exit(EXIT_FAILURE);
+        }
+    }
 }
 
 void init_inter_info(page_t *page){
-	for(int i =0; i<INTERNAL_ORDER; i++)
+	for(int i =0; i<INTERNAL_ORDER; i++){
 		page->inter_info[i] = (inter_record*)malloc(sizeof(inter_record));
+        if(page->inter_info[i] == NULL){
+            perror("page inter info creation for init.");
+            exit(EXIT_FAILURE);
+        }
+    }
 }
 
 void free_page_t(page_t *page){
@@ -283,7 +401,6 @@ void free_page_t(page_t *page){
 		if(page->inter_info[i] != NULL)
 			free(page->inter_info[i]);
 	}
-	
 	
 	if(page !=NULL)
 		free(page);

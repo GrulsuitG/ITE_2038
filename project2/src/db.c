@@ -3,7 +3,9 @@
 
 int open_table(char *pathname){ 
     int i;
+    filename = (char*) malloc(strlen(pathname));
     filename = pathname;
+    make_file();
     root = syncFileAndTree();
 	
     if(table_name[0] == NULL){
@@ -27,7 +29,12 @@ int db_insert(int64_t key, char* value){
     node *n;
     page_t *page = init_page_t();
     pagenum_t pagenum;
-    
+    if(filename == NULL){
+        printf("first open table\n");
+        return -1;
+    }
+
+
     n = find_leaf(root, key, false);
     if( n != NULL ){
         printf("the key %ld is already exist\n", key);    
@@ -54,11 +61,18 @@ int db_insert(int64_t key, char* value){
 
 int db_find(int64_t key, char *ret_val){
     node *n;
+    
+    if(filename == NULL){
+        printf("first open table\n");
+        return -1;
+    }
+
     n = find_leaf(root, key, false);
     if(n == NULL){
         printf("the key: %ld is not exist\n", key);
         return -1;
     }
+
     else{
         for(int i =0; i<n->num_keys; i++){
             if(key == n->keys[i]){
@@ -74,13 +88,17 @@ int db_delete(int64_t key){
     node *n;
     page_t *page= init_page_t();
     pagenum_t pagenum;
-    n= find_leaf(root, key, false);
-    if(n == NULL){
-        printf("the key: %ld is not exist\n", key);
+    if(filename == NULL){
+        printf("first open table\n");
         return -1;
     }
-    delete(root, key);
 
+    n= find_leaf(root, key, false);
+    if( n == NULL){
+        printf("the key : %ld is not exist\n", key);
+        return -1;
+    }
+    delete(root,key);
     while( Q!= NULL){
         n = dequeue();
         if(n->is_leaf)
@@ -192,7 +210,9 @@ node* deQ(){
 node* syncFileAndTree(){
     node *parent, *child;
     page_t *parentpage, *childpage;
-    
+    if(root == NULL){
+	return root;
+	}
     root = destroy_tree(root);
     
     file_read_page(0, parentpage);
