@@ -8,7 +8,7 @@
 #define MAX_TABLE_NUM 100
 
 int unique_id;
-;
+extern char* filename;
 char* table_name[MAX_TABLE_NUM];
 node* root;
 

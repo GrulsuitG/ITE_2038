@@ -151,7 +151,8 @@ void print_leaves( node * root ) {
     while (!c->is_leaf)
         c = c->pointers[0];
     while (true) {
-        for (i = 0; i < c->num_keys; i++) {
+        printf("( %lu )", c->pagenum);
+		for (i = 0; i < c->num_keys; i++) {
             if (verbose_output)
                 printf("%lx ", (unsigned long)c->pointers[i]);
             printf("%ld ", c->keys[i]);
@@ -222,6 +223,7 @@ void print_tree( node * root ) {
     enqueue(root);
     while( queue != NULL ) {
         n = dequeue();
+		printf(" ( %lu ) " , n->pagenum);
         if (n->parent != NULL && n == n->parent->pointers[0]) {
             new_rank = path_to_root( root, n );
             if (new_rank != rank) {

@@ -18,6 +18,7 @@
 #define O_DIRECT 00040000
 #endif
 
+extern char* filename;
 
 typedef uint64_t pagenum_t;
 
@@ -47,10 +48,6 @@ typedef struct page_t{
 	record *info[LEAF_ORDER];
 	inter_record *inter_info[INTERNAL_ORDER];
 }page_t;
-
-extern char *filename;
-pagenum_t globalpagenum;
-
 
 pagenum_t file_alloc_page();
 void file_free_page(pagenum_t pagenum);
