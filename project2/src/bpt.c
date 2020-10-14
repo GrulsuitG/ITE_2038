@@ -223,7 +223,7 @@ void print_tree( node * root ) {
     enqueue(root);
     while( queue != NULL ) {
         n = dequeue();
-		printf(" ( %lu ) " , n->pagenum);
+		//printf("1\n");
         if (n->parent != NULL && n == n->parent->pointers[0]) {
             new_rank = path_to_root( root, n );
             if (new_rank != rank) {
@@ -233,20 +233,24 @@ void print_tree( node * root ) {
         }
         if (verbose_output) 
             printf("(%lx)", (unsigned long)n);
+        printf(" ( %lu ) " , n->pagenum);
         for (i = 0; i < n->num_keys; i++) {
-            if (verbose_output)
+			if (verbose_output)
                 printf("%lx ", (unsigned long)n->pointers[i]);
             printf("%ld ", n->keys[i]);
         }
+        
         if (!n->is_leaf)
-            for (i = 0; i <= n->num_keys; i++)
+            for (i = 0; i <= n->num_keys; i++){
+                //printf("%d", i);
                 enqueue(n->pointers[i]);
-        if (verbose_output) {
+                }
+        /*if (verbose_output) {
             if (n->is_leaf) 
                 printf("%lx ", (unsigned long)n->pointers[LEAF_ORDER - 1]);
             else
                 printf("%lx ", (unsigned long)n->pointers[n->num_keys]);
-        }
+        }*/
         printf("| ");
     }
     printf("\n");
@@ -398,7 +402,8 @@ record * make_record(char* value) {
         exit(EXIT_FAILURE);
     }
     else {
-        new_record->value = value;
+	strncpy(new_record->value, value, sizeof(value));        
+	//*new_record->value = value;
     }
     return new_record;
 }

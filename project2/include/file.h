@@ -4,8 +4,8 @@
 #define PAGE_SIZE 4096
 #define DEFAULT_FREE_PAGE 10
 #define VALUE_SIZE 120
-#define LEAF_ORDER 32
-#define INTERNAL_ORDER 248
+#define LEAF_ORDER 4
+#define INTERNAL_ORDER 5
 
 
 
@@ -36,14 +36,14 @@ typedef struct inter_record{
 typedef struct page_t{
 	pagenum_t freePageNum;
 	pagenum_t rootPageNum;
-	long numOfPage;
+	pagenum_t numOfPage;
 
 	pagenum_t nextFreePageNum;
 
 	pagenum_t parentPageNum;
 	int isLeaf;
 	int numOfKey;
-	pagenum_t rightSibling;
+	pagenum_t pointer;
 	
 	record *info[LEAF_ORDER];
 	inter_record *inter_info[INTERNAL_ORDER];
