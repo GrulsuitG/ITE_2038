@@ -1,7 +1,47 @@
 #include "db.h"
+#include<time.h>
+
+int get_random_number(int from, int to) {
+	return rand() % (to - from + 1) + from;
+}
+
+//문자열 생성함수('a'~'z')
+void get_random_str(char* data) {
+	int num = get_random_number(0,120);
+	for (int i = 0; i < num; i++) {
+		data[i] = get_random_number(0, 25) + 'a';
+	}
+	data[num] = 0;
+}
+
+int main(){
+	int num, i;
+	char c[120];
+	srand(time(0));
+	open_table("dd");
+	for( i = 0; i< 10; i++){
+		num = rand()% 10000;	
+		get_random_str(c);	
+		//printf("%d %s\n", num, c);
+		db_insert(i,c);
+
+	}
+
+	print_tree(root);
+
+for( i = 0; i< 3; i++){
+		num = rand()% 10;	
+		get_random_str(c);	
+		//printf("%d %s\n", num, c);
+		db_delete(i);
+
+	}
+		print_tree(root);
+}
+
 
 // MAIN
-
+/*
 int main() {
     char instruction;
 	char* str = malloc(100);
@@ -25,9 +65,9 @@ int main() {
         case 'i':
             scanf("%ld", &key);
            scanf("%s", str);
-		root = insert(root, key, str);
+		//root = insert(root, key, str);
 	//	fgets(str, 100, stdin);
-           // if(!db_insert(key, str))
+            if(!db_insert(key, str))
                 print_tree(root);
            // else
            //     printf("insert fail\n");
@@ -83,4 +123,4 @@ int main() {
     printf("\n");
 	root =destroy_tree(root);
     return EXIT_SUCCESS;
-}
+}*/

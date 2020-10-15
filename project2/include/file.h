@@ -3,10 +3,15 @@
 
 #define PAGE_SIZE 4096
 #define DEFAULT_FREE_PAGE 10
+#ifndef VALUE_SIZE
 #define VALUE_SIZE 120
+#endif
+#ifndef LEAF_ORDER
 #define LEAF_ORDER 4
-#define INTERNAL_ORDER 5
-
+#endif
+#ifndef INTERNAL_ORDER
+#define INTERNAL_ORDER 6
+#endif
 
 
 #include<stdio.h>

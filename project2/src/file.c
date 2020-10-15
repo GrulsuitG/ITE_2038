@@ -9,7 +9,7 @@ pagenum_t file_alloc_page(){
 	pagenum_t read_info;
 	file_read_page(0,header);
 	
-	if((fd=open(filename, O_RDWR)) <0){
+	if((fd=open(filename, O_RDWR|O_SYNC)) <0){
 	    perror("file open error for alloc");
 		exit(EXIT_FAILURE);
 	}
@@ -20,7 +20,7 @@ pagenum_t file_alloc_page(){
         exit(EXIT_FAILURE);
     }
 
-	if(header->freePageNum == 0){
+	if(read_info == 0){
 	
 		pagenum = header->numOfPage;
 		lseek(fd,0,SEEK_END);
@@ -61,7 +61,7 @@ pagenum_t file_alloc_page(){
             perror("file write error 4 for alloc");
             exit(EXIT_FAILURE);
         }
-        file_read_page(0, header);
+        
 	}
     //write next free page num
     else{
@@ -88,10 +88,14 @@ void file_free_page(pagenum_t pagenum){
         exit(EXIT_FAILURE);
     }
 	
-    /*
+    
 	//move the pagenum and reset
-	lseek(fd, pagenum*PAGE_SIZE, SEEK_SET);
-	write(fd, NULL, PAGE_SIZE);
+	/*lseek(fd, pagenum*PAGE_SIZE, SEEK_SET);
+	read_info = 0;
+	if(write(fd, &read_info, PAGE_SIZE) < 0){
+		perror("file write error 1 for free");
+		exit(EXIT_FAILURE);
+	}
 	*/
 	//find first free page
 	lseek(fd, 0, SEEK_SET);
@@ -103,14 +107,14 @@ void file_free_page(pagenum_t pagenum){
 	//move the reseted page and write the frist free page
 	lseek(fd, pagenum*PAGE_SIZE, SEEK_SET);
 	if(write(fd, &read_info, sizeof(pagenum_t)) < 0){
-        perror("file write error 1 for free");
+        perror("file write error 2 for free");
         exit(EXIT_FAILURE);
     }
 	
 	//write the reseted page number at first free page 
 	lseek(fd, 0, SEEK_SET);
 	if(write(fd, &pagenum, sizeof(pagenum_t)) < 0){
-        perror("file write error 2 for free");
+        perror("file write error 3 for free");
         exit(EXIT_FAILURE);
     }
 
