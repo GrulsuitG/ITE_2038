@@ -18,18 +18,19 @@ int main() {
         case 'd':
             scanf("%ld", &key);
             if(!db_delete(key))
-                print_tree(root);
+               ;// print_tree(root);
             else
                 printf("delete fail\n");
             break;
         case 'i':
             scanf("%ld", &key);
            scanf("%s", str);
+		root = insert(root, key, str);
 	//	fgets(str, 100, stdin);
-            if(!db_insert(key, str))
+           // if(!db_insert(key, str))
                 print_tree(root);
-            else
-                printf("insert fail\n");
+           // else
+           //     printf("insert fail\n");
             break;
         case 'f':
         case 'p':
@@ -64,7 +65,7 @@ int main() {
         case 'x':
             if (root)
                 root = destroy_tree(root);
-            print_tree(root);
+            //print_tree(root);
             break;
         case 'o':
             scanf("%s", str);
@@ -80,6 +81,6 @@ int main() {
         printf("[%d]%s>", aa,filename);
     }
     printf("\n");
-
+	root =destroy_tree(root);
     return EXIT_SUCCESS;
 }

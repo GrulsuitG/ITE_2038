@@ -391,19 +391,20 @@ int cut( int length ) {
  * to which a key refers.
  */
 record * make_record(char* value) {
-    record * new_record = (record *)malloc(sizeof(record));
-    if (new_record == NULL) {
+    record * new_record = (record*)malloc(sizeof(record));
+	    
+
+	if (new_record == NULL) {
         perror("Record creation.");
         exit(EXIT_FAILURE);
     }
-    new_record->value = (char*)malloc(sizeof(char) *VALUE_SIZE);
+    new_record->value = (char*)malloc(VALUE_SIZE);
     if( new_record->value == NULL){
         perror("Record value creation.");
         exit(EXIT_FAILURE);
     }
     else {
-	strncpy(new_record->value, value, sizeof(value));        
-	//*new_record->value = value;
+	strncpy(new_record->value, value, VALUE_SIZE);	
     }
     return new_record;
 }
@@ -429,7 +430,7 @@ node * make_node( void ) {
         perror("New node pointers array.");
         exit(EXIT_FAILURE);
     }
-    new_node->pagenum = file_alloc_page();
+    //new_node->pagenum = file_alloc_page();
     new_node->is_leaf = false;
     new_node->num_keys = 0;
     new_node->parent = NULL;
@@ -456,7 +457,7 @@ node * make_leaf( void ) {
         perror("New node pointers array.");
         exit(EXIT_FAILURE);
     }
-    leaf->pagenum = file_alloc_page();
+    //leaf->pagenum = file_alloc_page();
     leaf->is_leaf = true;
     leaf->num_keys = 0;
     leaf->parent = NULL;
@@ -497,7 +498,7 @@ node * insert_into_leaf( node * leaf, int64_t key, record * pointer ) {
     leaf->keys[insertion_point] = key;
     leaf->pointers[insertion_point] = pointer;
     leaf->num_keys++;
-    enQ(leaf);
+    //enqueue(leaf);
     return leaf;
 }
 
@@ -571,8 +572,8 @@ node * insert_into_leaf_after_splitting(node * root, node * leaf, int64_t key, r
     new_leaf->parent = leaf->parent;
     new_key = new_leaf->keys[0];
     
-    enQ(leaf);
-    enQ(new_leaf);
+   // enqueue(leaf);
+    //enqueue(new_leaf);
     return insert_into_parent(root, leaf, new_key, new_leaf);
 }
 
@@ -592,7 +593,7 @@ node * insert_into_node(node * root, node * n,
     n->pointers[left_index + 1] = right;
     n->keys[left_index] = key;
     n->num_keys++;
-    enQ(n);
+   // enqueue(n);
     return root;
 }
 
@@ -669,14 +670,15 @@ node * insert_into_node_after_splitting(node * root, node * old_node, int left_i
     for (i = 0; i <= new_node->num_keys; i++) {
         child = new_node->pointers[i];
         child->parent = new_node;
+		//enqueue(child);
     }
 
     /* Insert a new key into the parent of the two
      * nodes resulting from the split, with
      * the old node to the left and the new to the right.
      */
-    enQ(old_node);
-    enQ(new_node);
+   // enqueue(old_node);
+    //enqueue(new_node);
     return insert_into_parent(root, old_node, k_prime, new_node);
 }
 
@@ -736,7 +738,7 @@ node * insert_into_new_root(node * left, int64_t key, node * right) {
     root->parent = NULL;
     left->parent = root;
     right->parent = root;
-    enQ(root);
+    //enqueue(root);
     return root;
 }
 
@@ -753,7 +755,7 @@ node * start_new_tree(int64_t key, record * pointer) {
     root->pointers[LEAF_ORDER - 1] = NULL;
     root->parent = NULL;
     root->num_keys++;
-    enQ(root);
+    //enqueue(root);
     return root;
 }
 
@@ -773,13 +775,14 @@ node * insert( node * root, int64_t key, char* value ) {
     /* The current implementation ignores
      * duplicates.
      */
-
+/*
     if (find(root, key, false) != NULL)
         return root;
-
+*/
     /* Create a new record for the
      * value.
      */
+	//printf("%s\n", value);
     pointer = make_record(value);
 
 
@@ -891,7 +894,7 @@ node * adjust_root(node * root) {
      */
 
     if (root->num_keys > 0)
-        enQ(root);
+        enqueue(root);
         return root;
 
     /* Case: empty root. 
@@ -916,7 +919,7 @@ node * adjust_root(node * root) {
     free(root->pointers);
     free(root);
     
-    enQ(new_root);
+    enqueue(new_root);
     return new_root;
 }
 

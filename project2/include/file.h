@@ -14,6 +14,7 @@
 #include<stdint.h>
 #include<fcntl.h>
 #include<unistd.h>
+#include<string.h>
 #ifndef O_DIRECT
 #define O_DIRECT 00040000
 #endif
@@ -21,17 +22,6 @@
 extern char* filename;
 
 typedef uint64_t pagenum_t;
-
-typedef struct record {
-    int64_t key;
-    char* value;
-}record;
-
-
-typedef struct inter_record{
-    int64_t key;
-    pagenum_t pagenum;
-}inter_record;
 
 typedef struct page_t{
 	pagenum_t freePageNum;
@@ -41,12 +31,13 @@ typedef struct page_t{
 	pagenum_t nextFreePageNum;
 
 	pagenum_t parentPageNum;
-	int isLeaf;
-	int numOfKey;
+	int is_leaf;
+	int num_keys;
 	pagenum_t pointer;
 	
-	record *info[LEAF_ORDER];
-	inter_record *inter_info[INTERNAL_ORDER];
+	char **record;
+	int64_t *key;
+	pagenum_t *pagenum;
 }page_t;
 
 pagenum_t file_alloc_page();
@@ -54,9 +45,9 @@ void file_free_page(pagenum_t pagenum);
 void file_read_page(pagenum_t pagenum, page_t* dest);
 void file_write_page(pagenum_t pagenum, const page_t* src);
 void make_file();
-page_t* init_page_t();
-void init_info(page_t *page);
-void init_inter_info(page_t *page);
-void free_page_t(page_t *page);
+page_t* init_page();
+page_t* init_leaf();
+page_t* init_inter();
+void free_page(page_t *page);
 
 #endif /* __FILE_H__*/

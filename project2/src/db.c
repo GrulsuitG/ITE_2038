@@ -1,12 +1,13 @@
 #include "db.h"
 
 char* filename;
-//node* Q = NULL;
+//node* queue = NULL;
 
 int open_table(char *pathname){ 
     //printf("0");
     int i;
     char* name;
+    
     //printf("a");
     if(table_name[0] == NULL){
         unique_id =0;
@@ -15,8 +16,8 @@ int open_table(char *pathname){
      for(i=0; i<unique_id; i++){
      	
         if( strcmp(pathname, table_name[i]) == 0){
-        	
             filename = table_name[i];
+           // root = syncFileAndTree();
             return i;
         }
      }
@@ -28,7 +29,7 @@ int open_table(char *pathname){
    //printf("e");
     make_file();
 	//printf("f");
-   root = syncFileAndTree();
+  // root = syncFileAndTree();
 	//printf("g");
     
    
@@ -44,8 +45,8 @@ int open_table(char *pathname){
 int db_insert(int64_t key, char* value){
     node *n;
 	//printf("a");
-    page_t *page = init_page_t();
-	page_t *header = init_page_t();
+    page_t *page;
+	page_t *header = init_page();
 	//printf("b");
     pagenum_t pagenum;
 	//printf("c");
@@ -62,45 +63,49 @@ int db_insert(int64_t key, char* value){
 	//printf("b");
     root = insert(root, key, value);
 	
-    
 	
-    while(Q != NULL){
-        n = deQ();
-        if(n->is_leaf)
-            init_info(page);
+    while(queue != NULL){
+		n = dequeue();
+    	if(n->is_leaf)
+            page = init_leaf();
         else
-            init_inter_info(page);
-        pagenum = node_to_page(n, page);
-		file_write_page(pagenum, page);
+            page =init_inter();
+        if(n->pagenum == 0)
+        	file_alloc_page();
+		pagenum = node_to_page(n, page);
+		file_write_page(pagenum, page); 
     }
 	file_read_page(0 , header);
 	if(root->pagenum != header->rootPageNum ){
 		header->rootPageNum = n->pagenum;
 		file_write_page(0, header);	
 	}	
-//:    free_page_t(page);
- 
+   
+	free_page(page);
+	free_page(header);
     return 0;
 }
 
 int db_find(int64_t key, char *ret_val){
     node *n;
+    //record *tmp;
     
     if(filename == NULL){
-        printf("first open table\n");
+        //printf("first open table\n");
         return -1;
     }
 
     n = find_leaf(root, key, false);
     if(n == NULL){
-        printf("the key: %ld is not exist\n", key);
+        //printf("the key: %ld is not exist\n", key);
         return -1;
     }
 
     else{
         for(int i =0; i<n->num_keys; i++){
             if(key == n->keys[i]){
-                ret_val = (char*)n->pointers[i];
+                //tmp = n->pointers[i];
+               // ret_val = tmp->value;
                 break;
             }
         }
@@ -110,94 +115,91 @@ int db_find(int64_t key, char *ret_val){
 
 int db_delete(int64_t key){
     node *n;
-    page_t *page= init_page_t();
-    page_t *header = init_page_t();
+    page_t *page;
+    page_t *header = init_page();
 	pagenum_t pagenum;
     if(filename == NULL){
-        printf("first open table\n");
+        //printf("first open table\n");
         return -1;
     }
 
     n= find_leaf(root, key, false);
     if( n == NULL){
-        printf("the key : %ld is not exist\n", key);
+        //printf("the key : %ld is not exist\n", key);
         return -1;
     }
     delete(root,key);
-    while( Q!= NULL){
+    while( queue!= NULL){
         n = dequeue();
         if(n->is_leaf)
-            init_info(page);
+            page = init_leaf();
         else
-            init_inter_info(page);
-        pagenum = node_to_page(n, page);
-        file_write_page(pagenum, page);
+            page = init_inter();
+       // pagenum = node_to_page(n, page);
+       // file_write_page(pagenum, page);
     }
-    //free_page_t(page);
+    
 	if(root->pagenum != header->rootPageNum ){
 		header->rootPageNum = n->pagenum;
 		file_write_page(0, header);	
 	}
-
+	
+	free_page(page);
+	free_page(header);
     return 0;
 }
 
-pagenum_t node_to_page(node* n, page_t* page){
-    node* tmp;
-    record* tmprec;
+pagenum_t node_to_page(node *n, page_t *page){
+    
+    node *tmp;
+    record *tmp_record;  	
     if(n->parent == NULL)
     	page->parentPageNum = 0;
 	else
 		page->parentPageNum = n->parent->pagenum;
 
-	page->isLeaf = n->is_leaf;
-    page->numOfKey= n->num_keys;
+	page->is_leaf = n->is_leaf;
+	page->num_keys= n->num_keys;
     
-    if(n-> is_leaf){
-        init_info(page);
-        
+    if(n-> is_leaf){ 
         tmp =(node*) n -> pointers[LEAF_ORDER];
         if(tmp == NULL)
             page->pointer = 0;
         else
             page->pointer = tmp->pagenum;
 
-        for(int i =0; i<page->numOfKey; i++){
-            page->info[i]->key = n->keys[i];
-            tmprec = (record*) n->pointers[i];
-            strncpy(page->info[i]->value, tmprec->value, sizeof(tmprec->value));
+        for(int i =0; i< n->num_keys; i++){
+            page->key[i] = n->keys[i];
+			tmp_record = n->pointers[i];
+            strncpy(page->record[i], tmp_record->value, VALUE_SIZE);
         }
-
+ 
     }
 
     else{
-        init_inter_info(page);
-
-        tmp = (node*) n->pointers[0];
-        page->pointer = tmp->pagenum;
-
-        for(int i =0; i < page->numOfKey; i++){
-            page->inter_info[i]->key = n->keys[i];
-            tmp = (node*) n->pointers[i+1];
-            page->inter_info[i]->pagenum = tmp->pagenum;
+    	tmp = n->pointers[0];
+    	page->pointer = tmp->pagenum;
+        for(int i =0; i < n->num_keys; i++){
+            page->key[i] = n->keys[i];
+            tmp = n->pointers[i+1];
+            if(tmp)
+            	page->pagenum[i] = tmp->pagenum;
         }
-    
-    
     }
 
     return n->pagenum;
 
 }
-
+/*
 void page_to_node(page_t *page,node **n, pagenum_t pagenum){
-    if(page->isLeaf)
+    if(page->is_leaf)
         *n = make_leaf();
     else
         *n = make_node();
 
     (*n)->pagenum = pagenum;
-    (*n)->is_leaf = page->isLeaf;
-    (*n)->num_keys = page->numOfKey;
+    (*n)->is_leaf = page->is_leaf;
+    (*n)->num_keys = page->num_keys;
     if((*n)->is_leaf){
         for(int i=0; i<LEAF_ORDER-1; i++){
             (*n)->keys[i] = page->info[i]->key;
@@ -211,30 +213,6 @@ void page_to_node(page_t *page,node **n, pagenum_t pagenum){
         }
     }
     
-}
-
-void enQ(node* n){
-    node* c;
-    if(Q== NULL){
-        Q = n;
-        Q->next = NULL;
-    }
-    else{
-        c =Q;
-        while( c->next != NULL){
-            c = c->next;
-        }
-        c->next = n;
-        n->next = NULL;
-    }
-}
-
-node* deQ(){
-    
-    node* n= Q;
-    Q = Q->next;
-    n->next = NULL;
-    return n;
 }
 
 node* syncFileAndTree(){
@@ -254,34 +232,39 @@ node* syncFileAndTree(){
 	
     page_to_node(parentpage, &root, parentpage->rootPageNum);
     
-	enQ(root);
+	enqueue(root);
     
-    while ( Q != NULL){
+    while ( queue != NULL){
     
-        parent= deQ();
+        parent= dequeue();
         file_read_page(parent->pagenum, parentpage);
         if(!parent->is_leaf){
         	
 			file_read_page(parentpage->pointer, childpage);
+			//printf("%d\n" ,childpage->inter_info[0]->key);
+			//for(int i =0; i<INTERNAL_ORDER-1; i++){
+        	//printf("%d\n" ,childpage->inter_info[i]->key);
+            
+        //}
 			page_to_node(childpage, &child, parentpage->pointer);
 			parent->pointers[0] = child;
 			child->parent = parent;
-			enQ(child);
-           /* for(int i =1; i<=parent->num_keys; i++){
+			enqueue(child);
+            for(int i =1; i<=parent->num_keys; i++){
                 file_read_page(parentpage->inter_info[i-1]->pagenum, childpage);
                 page_to_node(childpage, &child, parentpage->inter_info[i-1]->pagenum);
                 parent->pointers[i] = child;
                 child->parent = parent;
-                enQ(child);
+                enqueue(child);
 				if(child->is_leaf){
 					tmp = parent->pointers[i-1];
 					tmp->pointers[LEAF_ORDER] = child;
 				}
-            } */
+            } 
         }
-		
-	
     }
+    free_page_t(childpage);
+    free_page_t(parentpage);
    
     return root;
-}
+}*/

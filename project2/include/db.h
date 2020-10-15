@@ -22,8 +22,6 @@ int db_delete(int64_t key);
 pagenum_t node_to_page(node *node, page_t *page);
 
 void page_to_node(page_t *page, node **n, pagenum_t pagenum);
-void enQ(node *n);
-node* deQ();
 
 node* syncFileAndTree();
 
