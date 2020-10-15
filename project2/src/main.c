@@ -19,8 +19,8 @@ int main(){
 	char c[120];
 	srand(time(0));
 	open_table("dd");
-	for( i = 0; i< 10; i++){
-		num = rand()% 10000;	
+	for( i = 0; i< 30; i++){
+		num = rand()% 30;	
 		get_random_str(c);	
 		//printf("%d %s\n", num, c);
 		db_insert(i,c);
@@ -29,14 +29,14 @@ int main(){
 
 	print_tree(root);
 
-for( i = 0; i< 3; i++){
-		num = rand()% 10;	
+for( i = 0; i< 10; i++){
+		num = rand()% 30;	
 		get_random_str(c);	
 		//printf("%d %s\n", num, c);
-		db_delete(i);
-
+		db_delete(i+10);
+print_tree(root);
 	}
-		print_tree(root);
+		
 }
 
 

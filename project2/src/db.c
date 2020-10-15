@@ -113,7 +113,7 @@ int db_delete(int64_t key){
             page = init_inter();
         if(n->num_keys == 0){
         	printf("pagenum : %lu , %d\n", n->pagenum, n->num_keys);
-        	file_free_page(n->pagenum);
+        	//file_free_page(n->pagenum);
         	continue;
         }    
         printf("pagenum : %lu , %d\n", n->pagenum, n->num_keys);

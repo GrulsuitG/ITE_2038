@@ -921,6 +921,7 @@ node * remove_entry_from_node(node * n, int key, node * pointer) {
     else
         for (i = n->num_keys + 1; i < order; i++)
             n->pointers[i] = NULL;
+	enqueue(n);
 	return n;
 }
 
@@ -947,6 +948,7 @@ node * adjust_root(node * root) {
     if (!root->is_leaf) {
         new_root = root->pointers[0];
         new_root->parent = NULL;
+		//enqueue(new_root);
     }
 
     // If it is a leaf (has no children),
@@ -958,8 +960,7 @@ node * adjust_root(node * root) {
     free(root->keys);
     free(root->pointers);
     free(root);
-   	enqueue(root);
-	enqueue(new_root);
+   	//enqueue(root);
     return new_root;
 }
 
@@ -990,7 +991,7 @@ node * coalesce_nodes(node * root, node * n, node * neighbor, int neighbor_index
      * Recall that n and neighbor have swapped places
      * in the special case of n being a leftmost child.
      */
-
+	neighbor->pagenum = n->pagenum;
     neighbor_insertion_index = neighbor->num_keys;
 
     /* Case:  nonleaf node.
@@ -1046,11 +1047,10 @@ node * coalesce_nodes(node * root, node * n, node * neighbor, int neighbor_index
         }
         neighbor->pointers[order - 1] = n->pointers[order - 1];
     }
-	
-	enqueue(neighbor);
     root = delete_entry(root, n->parent, k_prime, n);
-	enqueue(n);	
-    //free(n->keys);
+//	enqueue(n);	
+//    enqueue(neighbor);
+	//free(n->keys);
     //free(n->pointers);
     //free(n); 
     return root;
@@ -1151,7 +1151,7 @@ node * delete_entry( node * root, node * n, int key, void * pointer ) {
     // Remove key and pointer from node.
 
     n = remove_entry_from_node(n, key, pointer);
-	enqueue(n);	
+		
     /* Case:  deletion from the root. 
      */
 
@@ -1195,12 +1195,13 @@ node * delete_entry( node * root, node * n, int key, void * pointer ) {
         n->parent->pointers[neighbor_index];
 
     capacity = n->is_leaf ? order : order - 1;
-
-	
-    /* Coalescence. */
-
-    //if (neighbor->num_keys + n->num_keys < capacity)
-        return coalesce_nodes(root, n, neighbor, neighbor_index, k_prime);
+	if(n->is_leaf){
+	//enqueue(neighbor);	
+    	enqueue(n);
+	/* Coalescence. */
+		return delete_entry(root,n->parent, k_prime, n); }
+	else
+    	return coalesce_nodes(root, n, neighbor, neighbor_index, k_prime);
 
     /* Redistribution. */
 	//else
@@ -1220,7 +1221,9 @@ node * delete(node * root, int key) {
     key_leaf = find_leaf(root, key, false);
     if (key_record != NULL && key_leaf != NULL) {
         root = delete_entry(root, key_leaf, key, key_record);
+		//enqueue(key_leaf);
 		free(key_record->value);
+
 		free(key_record);
     }
     return root;
