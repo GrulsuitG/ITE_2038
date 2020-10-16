@@ -7,10 +7,10 @@
 #define VALUE_SIZE 120
 #endif
 #ifndef LEAF_ORDER
-#define LEAF_ORDER 4
+#define LEAF_ORDER 32
 #endif
 #ifndef INTERNAL_ORDER
-#define INTERNAL_ORDER 6
+#define INTERNAL_ORDER 249
 #endif
 
 
