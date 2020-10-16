@@ -274,7 +274,7 @@ void print_tree( node * root ) {
     while( queue != NULL ) {
         n = dequeue();
         if (n->parent != NULL && n == n->parent->pointers[0]) {
-            new_rank = path_to_root( root, n );
+		   	new_rank = path_to_root( root, n );
             if (new_rank != rank) {
                 rank = new_rank;
                 printf("\n");
@@ -282,7 +282,10 @@ void print_tree( node * root ) {
         }
         if (verbose_output) 
             printf("(%lx)", (unsigned long)n);
-        printf("( %lu ) " , n->pagenum);
+        if(n->parent)
+			printf("(%lu,%lu) " , n->pagenum,n->parent->pagenum);
+		else
+			printf("(%lu) ", n->pagenum);
 		for (i = 0; i < n->num_keys; i++) {
             if (verbose_output)
                 printf("%lx ", (unsigned long)n->pointers[i]);
@@ -474,7 +477,7 @@ node * make_node( void ) {
         perror("New node pointers array.");
         exit(EXIT_FAILURE);
     }
-	new_node->pagenum = 0;
+	new_node->pagenum = file_alloc_page();
     new_node->is_leaf = false;
     new_node->num_keys = 0;
     new_node->parent = NULL;
@@ -502,7 +505,7 @@ node * make_leaf( void ) {
         perror("New leaf pointers array.");
         exit(EXIT_FAILURE);
     }
-	leaf->pagenum = 0;
+	leaf->pagenum = file_alloc_page();
     leaf->num_keys = 0;
     leaf->parent = NULL;
 	leaf->next = NULL;
@@ -605,8 +608,8 @@ node * insert_into_leaf_after_splitting(node * root, node * leaf, int key, recor
     free(temp_pointers);
     free(temp_keys);
 
-    new_leaf->pointers[order - 1] = leaf->pointers[order - 1];
-    leaf->pointers[order - 1] = new_leaf;
+    new_leaf->pointers[LEAF_ORDER-1] = leaf->pointers[LEAF_ORDER-1];
+    leaf->pointers[LEAF_ORDER-1] = new_leaf;
 
     for (i = leaf->num_keys; i < order - 1; i++)
         leaf->pointers[i] = NULL;
@@ -615,6 +618,7 @@ node * insert_into_leaf_after_splitting(node * root, node * leaf, int key, recor
 
     new_leaf->parent = leaf->parent;
     new_key = new_leaf->keys[0];
+
 
     return insert_into_parent(root, leaf, new_key, new_leaf);
 }
@@ -649,6 +653,7 @@ node * insert_into_node_after_splitting(node * root, node * old_node, int left_i
     int i, j, split, k_prime, order;
     node * new_node, * child;
     int * temp_keys;
+	node *temp;
     node ** temp_pointers;
 
 	order = INTERNAL_ORDER;
@@ -713,7 +718,6 @@ node * insert_into_node_after_splitting(node * root, node * old_node, int left_i
         child->parent = new_node;
 		enqueue(child);
     }
-
     /* Insert a new key into the parent of the two
      * nodes resulting from the split, with
      * the old node to the left and the new to the right.
@@ -736,8 +740,9 @@ node * insert_into_parent(node * root, node * left, int key, node * right) {
 
 	enqueue(left);
 	enqueue(right);
-    /* Case: new root. */
 	
+	/* Case: new root. */
+
     if (parent == NULL)
         return insert_into_new_root(left, key, right);
 
@@ -891,7 +896,8 @@ int get_neighbor_index( node * n ) {
 
 node * remove_entry_from_node(node * n, int key, node * pointer) {
 
-    int i, num_pointers, order;
+    int i, num_pointers, order, neighbor_index;
+	node *tmp;
 
     // Remove the key and shift other keys accordingly.
     i = 0;
@@ -909,7 +915,7 @@ node * remove_entry_from_node(node * n, int key, node * pointer) {
     for (++i; i < num_pointers; i++)
         n->pointers[i - 1] = n->pointers[i];
 
-
+	
     // One key fewer.
     n->num_keys--;
 	order = n->is_leaf ? LEAF_ORDER : INTERNAL_ORDER;
@@ -921,7 +927,15 @@ node * remove_entry_from_node(node * n, int key, node * pointer) {
     else
         for (i = n->num_keys + 1; i < order; i++)
             n->pointers[i] = NULL;
-	enqueue(n);
+	
+	if(!n->is_leaf){
+		printf("cur page : %lu %lu\n", n->pagenum, pointer->pagenum);
+//		enqueue(pointer);
+//		enqueue(n);
+
+	}
+	//else
+	//	enqueue(n);
 	return n;
 }
 
@@ -974,16 +988,22 @@ node * adjust_root(node * root) {
 node * coalesce_nodes(node * root, node * n, node * neighbor, int neighbor_index, int k_prime) {
 
     int i, j, neighbor_insertion_index, n_end;
-    node * tmp;
+    pagenum_t pagenum;
+	node *tmp, *tmp2;
 
     /* Swap neighbor with node if node is on the
      * extreme left and neighbor is to its right.
      */
-
+	printf("cur page in col: %lu %lu\n", n->pagenum, neighbor->pagenum);
     if (neighbor_index == -1) {
         tmp = n;
         n = neighbor;
         neighbor = tmp;
+		if(n->is_leaf){
+			pagenum = neighbor->pagenum;
+			neighbor->pagenum = n->pagenum;
+			n->pagenum = pagenum;
+			}
     }
 
     /* Starting point in the neighbor for copying
@@ -991,7 +1011,7 @@ node * coalesce_nodes(node * root, node * n, node * neighbor, int neighbor_index
      * Recall that n and neighbor have swapped places
      * in the special case of n being a leftmost child.
      */
-	neighbor->pagenum = n->pagenum;
+	
     neighbor_insertion_index = neighbor->num_keys;
 
     /* Case:  nonleaf node.
@@ -1003,7 +1023,7 @@ node * coalesce_nodes(node * root, node * n, node * neighbor, int neighbor_index
 
         /* Append k_prime.
          */
-
+		
         neighbor->keys[neighbor_insertion_index] = k_prime;
         neighbor->num_keys++;
 
@@ -1029,8 +1049,9 @@ node * coalesce_nodes(node * root, node * n, node * neighbor, int neighbor_index
         for (i = 0; i < neighbor->num_keys + 1; i++) {
             tmp = (node *)neighbor->pointers[i];
             tmp->parent = neighbor;
-			enqueue(tmp);
+			enqueue(tmp->parent);
         }
+		enqueue(neighbor);
     }
 
     /* In a leaf, append the keys and pointers of
@@ -1045,15 +1066,22 @@ node * coalesce_nodes(node * root, node * n, node * neighbor, int neighbor_index
             neighbor->pointers[i] = n->pointers[j];
             neighbor->num_keys++;
         }
+		n->num_keys =0;
+		enqueue(n);
+		//enqueue(neighbor);
         neighbor->pointers[order - 1] = n->pointers[order - 1];
+		//root= delete_entry(root,n->parent, k_prime, n);
     }
-    root = delete_entry(root, n->parent, k_prime, n);
+    //root = delete_entry(root, n->parent, k_prime, n);
 //	enqueue(n);	
-//    enqueue(neighbor);
+    //if(n->is_leaf)
+	//	enqueue(neighbor);
 	//free(n->keys);
     //free(n->pointers);
     //free(n); 
-    return root;
+    //return root;
+	return delete_entry(root, n->parent, k_prime ,n);
+	;
 }
 
 
@@ -1151,7 +1179,10 @@ node * delete_entry( node * root, node * n, int key, void * pointer ) {
     // Remove key and pointer from node.
 
     n = remove_entry_from_node(n, key, pointer);
-		
+	if(!n->is_leaf){
+	//	enqueue(pointer);
+		enqueue(n);		
+	}
     /* Case:  deletion from the root. 
      */
 
@@ -1195,12 +1226,7 @@ node * delete_entry( node * root, node * n, int key, void * pointer ) {
         n->parent->pointers[neighbor_index];
 
     capacity = n->is_leaf ? order : order - 1;
-	if(n->is_leaf){
-	//enqueue(neighbor);	
-    	enqueue(n);
 	/* Coalescence. */
-		return delete_entry(root,n->parent, k_prime, n); }
-	else
     	return coalesce_nodes(root, n, neighbor, neighbor_index, k_prime);
 
     /* Redistribution. */
@@ -1214,14 +1240,15 @@ node * delete_entry( node * root, node * n, int key, void * pointer ) {
  */
 node * delete(node * root, int key) {
 
-    node * key_leaf;
+    node  *key_leaf, *temp;
     record * key_record;
 
     key_record = find(root, key, false);
     key_leaf = find_leaf(root, key, false);
     if (key_record != NULL && key_leaf != NULL) {
         root = delete_entry(root, key_leaf, key, key_record);
-		//enqueue(key_leaf);
+		if(!queue)
+			enqueue(key_leaf);
 		free(key_record->value);
 
 		free(key_record);

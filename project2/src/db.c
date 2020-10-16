@@ -72,9 +72,8 @@ int db_insert(int64_t key, char* value){
             page =init_inter();
             
         if(n->pagenum == 0){
-        	n->pagenum = file_alloc_page();
+			n->pagenum = file_alloc_page();
         }
-		
 		node_to_page(n, page);
 		file_write_page(n->pagenum, page); 
 		
@@ -82,6 +81,7 @@ int db_insert(int64_t key, char* value){
     }
 	file_read_page(0 , header);
 	if(root->pagenum != header->rootPageNum ){
+
 		header->rootPageNum = n->pagenum;
 		file_write_page(0, header);	
 	}	

@@ -20,14 +20,14 @@ int main(){
 	srand(time(0));
 	open_table("dd");
 	for( i = 0; i< 30; i++){
-		num = rand()% 30;	
+		num = rand()% 50;	
 		get_random_str(c);	
 		//printf("%d %s\n", num, c);
 		db_insert(i,c);
 
 	}
-
-	print_tree(root);
+//print_tree(root);
+	
 
 for( i = 0; i< 10; i++){
 		num = rand()% 30;	
