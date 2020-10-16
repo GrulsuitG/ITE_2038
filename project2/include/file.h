@@ -3,15 +3,9 @@
 
 #define PAGE_SIZE 4096
 #define DEFAULT_FREE_PAGE 10
-#ifndef VALUE_SIZE
 #define VALUE_SIZE 120
-#endif
-#ifndef LEAF_ORDER
 #define LEAF_ORDER 32
-#endif
-#ifndef INTERNAL_ORDER
 #define INTERNAL_ORDER 249
-#endif
 
 
 #include<stdio.h>
@@ -49,9 +43,9 @@ pagenum_t file_alloc_page();
 void file_free_page(pagenum_t pagenum);
 void file_read_page(pagenum_t pagenum, page_t* dest);
 void file_write_page(pagenum_t pagenum, const page_t* src);
+
 void make_file();
 int* get_freelist();
-int page_is(pagenum_t pagenum);
 page_t* init_page();
 
 void free_page(page_t *page);

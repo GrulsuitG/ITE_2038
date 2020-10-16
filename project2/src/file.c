@@ -87,16 +87,7 @@ void file_free_page(pagenum_t pagenum){
         perror("file open error for free");
         exit(EXIT_FAILURE);
     }
-	
     
-	//move the pagenum and reset
-	/*lseek(fd, pagenum*PAGE_SIZE, SEEK_SET);
-	read_info = 0;
-	if(write(fd, &read_info, PAGE_SIZE) < 0){
-		perror("file write error 1 for free");
-		exit(EXIT_FAILURE);
-	}
-	*/
 	//find first free page
 	lseek(fd, 0, SEEK_SET);
 	if(read(fd, &read_info, sizeof(pagenum_t)) < 0){
@@ -209,13 +200,11 @@ void file_read_page(pagenum_t pagenum, page_t* dest){
                     perror("file read error 10 for read");
                     exit(EXIT_FAILURE);
                 }
-				//dest->key[i] =(int)read_info;
 				
 				if(read(fd, &dest->pagenum[i] , sizeof(pagenum_t)) < 0){
                     perror("file read error 11 for read");
                     exit(EXIT_FAILURE);
                 }
-				//dest->pagenum[i] = read_info2;
 			}
 		}
 	}
@@ -233,12 +222,6 @@ void file_write_page(pagenum_t pagenum, const page_t* src){
 		perror("file open error for write");
 		exit(EXIT_FAILURE);
 	}
-    /*
-	if(pagenum == header->freePageNum){
-		pagenum = file_alloc_page();
-		return file_write_page(pagenum, src);
-	}
-	*/
 	
 	//if the pagenum is 0, that is headpage
 	if(pagenum ==0){
@@ -408,22 +391,6 @@ int* get_freelist(){
 	return list;
 }
 
-int page_is(pagenum_t pagenum){
-	page_t *header = init_page();
-	int fd, is_leaf;
-	
-	if((fd = open(filename, O_RDONLY)) <0){
-		perror("file open error for page_is");
-		exit(EXIT_FAILURE);
-	}
-	lseek(fd,pagenum*PAGE_SIZE + sizeof(pagenum_t), SEEK_SET);
-	if(read(fd, &is_leaf, sizeof(int)) < 0){
-		perror("file open error for page_is");
-		exit(EXIT_FAILURE);
-	}
-	return is_leaf;
-}
-
 page_t* init_page(){
 	page_t *page;
 	int i;
@@ -471,7 +438,6 @@ void free_page(page_t *page){
 		}
 	}
 	free(page->record);
-	
 	
 	free(page->pagenum);
 	free(page->key);

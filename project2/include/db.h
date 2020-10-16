@@ -3,8 +3,6 @@
 #include"bpt.h"
 #include"file.h"
 
-
-
 #define MAX_TABLE_NUM 100
 
 int unique_id;
@@ -18,9 +16,11 @@ int db_find(int64_t key, char *ret_val);
 int db_delete(int64_t key);
 
 void make_free();
+
 page_t* node_to_page(node *node);
 node* page_to_node(page_t *page, pagenum_t pagenum);
 
 node* syncFileAndTree();
 
+void close_table();
 #endif

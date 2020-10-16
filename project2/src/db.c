@@ -1,12 +1,11 @@
 #include "db.h"
 
 char* filename;
-//node* queue = NULL;
 
 int open_table(char *pathname){ 
     int i;
     char* name;
-    
+    close_table();
     if(table_name[0] == NULL){
         unique_id =0;
     }
@@ -261,4 +260,9 @@ node* syncFileAndTree(){
   	free_page(parentpage);
   	free_page(childpage);
     return root;
+}
+
+void close_table(){
+	if(root)
+		make_free();
 }
