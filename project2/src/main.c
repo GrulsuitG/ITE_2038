@@ -21,9 +21,10 @@ int main(){
 	int* list;
 	srand(time(0));
 	//printf("%d",open_table("db"));
-	printf("%d",open_table("ff"));
+	printf("%d",open_table("gg"));
+	open_table("db");
 	//printf("%d",open_table("db"));
-	//print_tree(root);
+	print_tree(root);
 	/*for(i = 0; i< 1000; i++){
 		num = rand()%100;	
 		if(!db_find(num, value))	
@@ -34,7 +35,7 @@ int main(){
 	print_tree(root);
 	//print_tree(root);
 	//open_table("dd");*/
-	for( i = 0; i< 1000; i++){
+/*	for( i = 0; i< 1000; i++){
 		num = rand()%10000;	
 		get_random_str(c);	
 		//printf("%d %s\n", num, c);

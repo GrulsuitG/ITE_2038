@@ -8,7 +8,13 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
-#include "file.h"
+
+#ifndef SIZE_ORDER
+#define SIZE_ORDER
+#define VALUE_SIZE 120
+#define LEAF_ORDER 32
+#define INTERNAL_ORDER 249
+#endif
 
 #ifdef WINDOWS
 #define bool char
@@ -27,10 +33,13 @@
  * to change the type and content
  * of the value field.
  */
+#ifndef __RECORD__
+#define __RECORD__
 typedef struct record {
     char* value;
 } record;
-
+#endif
+typedef uint64_t pagenum_t;
 /* Type representing a node in the B+ tree.
  * This type is general enough to serve for both
  * the leaf and the internal node.
@@ -68,6 +77,7 @@ typedef struct node {
     int num_keys;
     struct node * next; // Used for queue.
 } node;
+
 
 // GLOBALS.
 

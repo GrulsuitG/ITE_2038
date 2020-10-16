@@ -56,19 +56,11 @@ int db_insert(int64_t key, char* value){
 	
     while(queue != NULL){
 		n = dequeue();
-		//printf("%ld\n", n->pagenum);
 		if(n->pagenum == 0)
 			n->pagenum =file_alloc_page();
 		
-		if(n->is_leaf){
-			if(n->pointers[LEAF_ORDER-1]){
-				tmp  = n->pointers[LEAF_ORDER-1];			
-				printf("%ld\n", tmp->pagenum);}
-		}
 		page = node_to_page(n);
 		file_write_page(n->pagenum, page); 
-		
-
     }
 	file_read_page(0 , header);
 	if(root->pagenum != header->rootPageNum ){
@@ -110,6 +102,24 @@ int db_delete(int64_t key){
 		file_write_page(0, header);	
 	}
     return 0;
+}
+
+int db_find(int64_t key, char *ret_val){
+    record *r;
+    
+    if(filename == NULL){
+        return -1;
+    }
+
+    r = find(root, key, false);
+    if(r == NULL){
+        return -1;
+    }
+
+    else
+        strncpy(ret_val, r->value, VALUE_SIZE);
+    return 0;
+
 }
 
 void make_free(){
@@ -154,8 +164,9 @@ page_t* node_to_page(node *n){
 
         for(int i =0; i< n->num_keys; i++){
             page->key[i] = n->keys[i];
+			//page->record[i] = n->pointers[i];
 			tmp_record = n->pointers[i];
-            strncpy(page->record[i], tmp_record->value, VALUE_SIZE);
+            strncpy(page->record[i].value, tmp_record->value, VALUE_SIZE);
         }
  
     }
@@ -175,23 +186,7 @@ page_t* node_to_page(node *n){
 
 }
 
-int db_find(int64_t key, char *ret_val){
-    record *r;
-    
-    if(filename == NULL){
-        return -1;
-    }
 
-    r = find(root, key, false);
-    if(r == NULL){
-        return -1;
-    }
-
-    else
-        strncpy(ret_val, r->value, VALUE_SIZE);
-    return 0;
-
-}
 
 node* page_to_node(page_t *page, pagenum_t pagenum){
     node *n;
@@ -207,8 +202,10 @@ node* page_to_node(page_t *page, pagenum_t pagenum){
     if(n->is_leaf){
         for(int i=0; i<n->num_keys; i++){
             n->keys[i] = page->key[i];
-            temp = make_record(page->record[i]);
+            temp = make_record(page->record[i].value);
             n->pointers[i] = temp;
+			//strncpy(temp->value, page->record[i].value,VALUE_SIZE);
+			//temp->value = page->record[i].value = temp->value
         }
         n->pointers[LEAF_ORDER-1] = NULL;
     }

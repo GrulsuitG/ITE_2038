@@ -3,9 +3,13 @@
 
 #define PAGE_SIZE 4096
 #define DEFAULT_FREE_PAGE 10
+
+#ifndef SIZE_ORDER
+#define SIZE_ORDER
 #define VALUE_SIZE 120
 #define LEAF_ORDER 32
 #define INTERNAL_ORDER 249
+#endif
 
 
 #include<stdio.h>
@@ -22,6 +26,12 @@ extern char* filename;
 
 typedef uint64_t pagenum_t;
 
+#ifndef __RECORD__
+#define __RECORD__
+typedef struct record {
+    char* value;
+} record;
+#endif
 typedef struct page_t{
 	pagenum_t freePageNum;
 	pagenum_t rootPageNum;
@@ -34,7 +44,7 @@ typedef struct page_t{
 	int num_keys;
 	pagenum_t pointer;
 	
-	char **record;
+	record *record;
 	int64_t *key;
 	pagenum_t *pagenum;
 }page_t;

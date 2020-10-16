@@ -186,11 +186,11 @@ void file_read_page(pagenum_t pagenum, page_t* dest){
                  }
 				
 				
-				if(read(fd, read_info, sizeof(char)*VALUE_SIZE) < 0){
+				if(read(fd, dest->record[i].value, sizeof(char)*VALUE_SIZE) < 0){
 					perror("file read error 9 for read");
 					exit(EXIT_FAILURE);
 				}
-				strncpy(dest->record[i], read_info,VALUE_SIZE);
+				//strncpy(dest->record[i], read_info,VALUE_SIZE);
 			}
 		}
 
@@ -273,7 +273,7 @@ void file_write_page(pagenum_t pagenum, const page_t* src){
                    exit(EXIT_FAILURE);
                 }
 			fsync(fd);
-				if(write(fd, src->record[i],sizeof(char)*VALUE_SIZE) < 0){
+				if(write(fd, src->record[i].value,sizeof(char)*VALUE_SIZE) < 0){
                     perror("file write error 9 for write");
                     exit(EXIT_FAILURE);
                 }
@@ -407,7 +407,20 @@ page_t* init_page(){
 	}
 	memset(page->key, 0, sizeof(page->key));
 	
-	page->record = (char**) malloc(sizeof(char*) * (LEAF_ORDER-1));
+	page->record = (record*)malloc(sizeof(record) *(LEAF_ORDER-1));
+	if(page->record == NULL){
+		perror("page record creation for init");
+		exit(EXIT_FAILURE);
+	}
+	for(i= 0 ; i<LEAF_ORDER-1; i++){
+		page->record[i].value = (char*)malloc(sizeof(char) * VALUE_SIZE);
+	    if(page->record[i].value == NULL){
+            perror("page record creation for init.");
+            exit(EXIT_FAILURE);
+        }
+        memset(page->record[i].value, 0, sizeof(page->record[i].value));
+    }	
+	/*page->record = (char**) malloc(sizeof(char*) * (LEAF_ORDER-1));
 	if(page->record == NULL){
 		perror("page record creation for init");
 		exit(EXIT_FAILURE);
@@ -419,7 +432,7 @@ page_t* init_page(){
             exit(EXIT_FAILURE);
         }
         memset(page->record[i], 0, sizeof(page->record[i]));
-    }
+    }*/
 	 
 	page->pagenum = malloc(sizeof(pagenum_t) * (INTERNAL_ORDER -1));
     if(page->pagenum == NULL){
@@ -434,7 +447,7 @@ void free_page(page_t *page){
 	int i;
 	if(page->record){
 		for(i=0; i<LEAF_ORDER-1; i++){
-				free(page->record[i]);
+				free(page->record[i].value);
 		}
 	}
 	free(page->record);
