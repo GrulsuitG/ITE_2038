@@ -20,26 +20,30 @@ int main(){
 	char* value = malloc(120);
 	int* list;
 	srand(time(0));
-	open_table("ff");
-	for(i = 0; i< 100; i++){
+	//printf("%d",open_table("db"));
+	printf("%d",open_table("ff"));
+	//printf("%d",open_table("db"));
+	//print_tree(root);
+	/*for(i = 0; i< 1000; i++){
 		num = rand()%100;	
 		if(!db_find(num, value))	
 			printf("%d : %s\n",num,value);
 	}
 	//print_tree(root);
 	//db_insert(11111, "asdasd");
+	print_tree(root);
 	//print_tree(root);
-	//print_tree(root);
-	//open_table("dd");
-/*	for( i = 0; i< 10000; i++){
-		num = rand()%100000;	
+	//open_table("dd");*/
+	for( i = 0; i< 1000; i++){
+		num = rand()%10000;	
 		get_random_str(c);	
 		//printf("%d %s\n", num, c);
 		db_insert(num,c);
 
 	}
 
-print_tree(root);/*
+print_tree(root);
+/*
 printf("=========================================\n");
 for( i = 0; i< 30; i++){
 		num = rand()% 200;	

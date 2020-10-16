@@ -35,7 +35,7 @@ int open_table(char *pathname){
 
 int db_insert(int64_t key, char* value){
     node *n;
-	
+	node* tmp;
     page_t *page= init_page();
 	page_t *header = init_page();
 	
@@ -56,6 +56,15 @@ int db_insert(int64_t key, char* value){
 	
     while(queue != NULL){
 		n = dequeue();
+		//printf("%ld\n", n->pagenum);
+		if(n->pagenum == 0)
+			n->pagenum =file_alloc_page();
+		
+		if(n->is_leaf){
+			if(n->pointers[LEAF_ORDER-1]){
+				tmp  = n->pointers[LEAF_ORDER-1];			
+				printf("%ld\n", tmp->pagenum);}
+		}
 		page = node_to_page(n);
 		file_write_page(n->pagenum, page); 
 		
@@ -265,4 +274,5 @@ node* syncFileAndTree(){
 void close_table(){
 	if(root)
 		make_free();
+
 }

@@ -190,7 +190,7 @@ void file_read_page(pagenum_t pagenum, page_t* dest){
 					perror("file read error 9 for read");
 					exit(EXIT_FAILURE);
 				}
-				strcpy(dest->record[i], read_info);
+				strncpy(dest->record[i], read_info,VALUE_SIZE);
 			}
 		}
 

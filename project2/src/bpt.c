@@ -498,7 +498,7 @@ node * insert_into_leaf_after_splitting(node * root, node * leaf, int64_t key, r
 	int64_t new_key;
 	order = LEAF_ORDER;
     new_leaf = make_leaf();
-    new_leaf -> pagenum = file_alloc_page();
+    //new_leaf -> pagenum = file_alloc_page();
 
     temp_keys = malloc( order * sizeof(int) );
     if (temp_keys == NULL) {
@@ -633,7 +633,7 @@ node * insert_into_node_after_splitting(node * root, node * old_node, int left_i
      */  
     split = cut(order);
     new_node = make_node();
-	new_node->pagenum = file_alloc_page();
+	//new_node->pagenum = file_alloc_page();
     old_node->num_keys = 0;
     for (i = 0; i < split - 1; i++) {
         old_node->pointers[i] = temp_pointers[i];
@@ -676,9 +676,9 @@ node * insert_into_parent(node * root, node * left, int64_t key, node * right) {
 
     parent = left->parent;
 
-	enqueue(left);
 	enqueue(right);
-	
+	enqueue(left);
+	//enqueue(right);
 	/* Case: new root. */
 
     if (parent == NULL)
@@ -716,7 +716,7 @@ node * insert_into_parent(node * root, node * left, int64_t key, node * right) {
 node * insert_into_new_root(node * left, int64_t key, node * right) {
 
     node * root = make_node();
-    root->pagenum = file_alloc_page();
+    //root->pagenum = file_alloc_page();
     root->keys[0] = key;
     root->pointers[0] = left;
     root->pointers[1] = right;
@@ -736,7 +736,7 @@ node * insert_into_new_root(node * left, int64_t key, node * right) {
 node * start_new_tree(int64_t key, record * pointer) {
 
     node * root = make_leaf();
-    root -> pagenum = file_alloc_page();
+    //root -> pagenum = file_alloc_page();
     root->keys[0] = key;
     root->pointers[0] = pointer;
     root->pointers[(LEAF_ORDER-1)] = NULL;
