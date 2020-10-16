@@ -185,7 +185,6 @@ void file_read_page(pagenum_t pagenum, page_t* dest){
             perror("file read error 7 for read");
             exit(EXIT_FAILURE);
         }
-		
 
 		if(dest->is_leaf == 1){
 			
@@ -383,28 +382,58 @@ void make_file(){
 
 }
 
-page_t* init_page(){
-	page_t *page;
+int* get_freelist(){
+	page_t *header=init_page();
+	pagenum_t pagenum;
+	int fd;
+	int *list;
 	
-	page = (page_t*) malloc(sizeof(page_t));
-	if( page == NULL){
-        perror("page creation for init");
-        exit(EXIT_FAILURE);
-    }
-    memset(page, 0, sizeof(page));
-    return page;
+	file_read_page(0, header);
+	list = malloc(sizeof(int) * header->numOfPage);
+	
+	if((fd = open(filename, O_RDONLY)) <0){
+		perror("file open error for get freelist");
+		exit(EXIT_FAILURE);
+	}
+	pagenum = header->freePageNum;
+	while(pagenum != 0){
+		list[pagenum] = 1;
+		lseek(fd, PAGE_SIZE * pagenum, SEEK_SET);
+		if(read(fd,&pagenum, sizeof(pagenum_t)) < 0){
+			perror("file read error for get freelist");
+			exit(EXIT_FAILURE);
+		}
+	}
+	
+	return list;
 }
 
-page_t* init_leaf(){
+int page_is(pagenum_t pagenum){
+	page_t *header = init_page();
+	int fd, is_leaf;
+	
+	if((fd = open(filename, O_RDONLY)) <0){
+		perror("file open error for page_is");
+		exit(EXIT_FAILURE);
+	}
+	lseek(fd,pagenum*PAGE_SIZE + sizeof(pagenum_t), SEEK_SET);
+	if(read(fd, &is_leaf, sizeof(int)) < 0){
+		perror("file open error for page_is");
+		exit(EXIT_FAILURE);
+	}
+	return is_leaf;
+}
+
+page_t* init_page(){
 	page_t *page;
 	int i;
-	page = init_page();
+	page = malloc(sizeof(page_t));
 	if( page == NULL){
         perror("page creation for init");
         exit(EXIT_FAILURE);
     }
     
-	page->key = malloc((LEAF_ORDER-1) * sizeof(page_t));
+	page->key = malloc((INTERNAL_ORDER-1) * sizeof(page_t));
     if(page->key == NULL){
     	perror("page key creation for init.");
 		exit(EXIT_FAILURE);
@@ -425,31 +454,13 @@ page_t* init_leaf(){
         memset(page->record[i], 0, sizeof(page->record[i]));
     }
 	 
-	page->pagenum = malloc(sizeof(pagenum_t));
-	return page;
-}
-
-page_t* init_inter(){
-	page_t *page;
-	
-	page =init_page();
-
-	page->key = malloc((INTERNAL_ORDER-1) * sizeof(int64_t));
-    if(page->key == NULL){
-    	perror("page key creation for init.");
-		exit(EXIT_FAILURE);
-	}
-	memset(page->key, 0, sizeof(page->key));
-	
 	page->pagenum = malloc(sizeof(pagenum_t) * (INTERNAL_ORDER -1));
     if(page->pagenum == NULL){
     	perror("page info creation for init.");
 		exit(EXIT_FAILURE);
 	}
 	memset(page->pagenum, 0, sizeof(page->pagenum));
-	
-	
-    return page;
+	return page;
 }
 
 void free_page(page_t *page){
@@ -461,8 +472,8 @@ void free_page(page_t *page){
 	}
 	free(page->record);
 	
-	if(page->pagenum)
-		free(page->pagenum);
+	
+	free(page->pagenum);
 	free(page->key);
 	free(page);
 

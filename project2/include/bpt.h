@@ -8,7 +8,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
-
+#include "file.h"
 
 typedef uint64_t pagenum_t;
 
@@ -23,15 +23,7 @@ typedef uint64_t pagenum_t;
 
 // Minimum order is necessarily 3.  We set the maximum
 // order arbitrarily.  You may change the maximum order.
-#ifndef LEAF_ORDER
-#define LEAF_ORDER 4
-#endif
-#ifndef INTERNAL_ORDER
-#define INTERNAL_ORDER 6
-#endif
-#ifndef VALUE_SIZE
-#define VALUE_SIZE 120
-#endif
+
 // Constants for printing part or all of the GPL license.
 #define LICENSE_FILE "LICENSE.txt"
 #define LICENSE_WARRANTEE 0

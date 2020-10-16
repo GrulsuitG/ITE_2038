@@ -17,26 +17,29 @@ void get_random_str(char* data) {
 int main(){
 	int num, i;
 	char c[120];
+	int* list;
 	srand(time(0));
-	open_table("dd");
-	for( i = 0; i< 30; i++){
-		num = rand()% 50;	
+	open_table("fff");
+	//print_tree(root);
+	//open_table("dd");
+	/*for( i = 0; i< 150; i++){
+		num = rand()% 200;	
 		get_random_str(c);	
 		//printf("%d %s\n", num, c);
-		db_insert(i,c);
+		db_insert(num,c);
 
 	}
-//print_tree(root);
-	
 
-for( i = 0; i< 10; i++){
-		num = rand()% 30;	
-		get_random_str(c);	
-		//printf("%d %s\n", num, c);
-		db_delete(i+10);
 print_tree(root);
+printf("=========================================\n");
+for( i = 0; i< 30; i++){
+		num = rand()% 200;	
+		get_random_str(c);	
+		//printf("%d %s\n", num, c);
+		db_delete(num);
+//print_tree(root);
 	}
-		
+print_tree(root);*/
 }
 
 
