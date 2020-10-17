@@ -58,7 +58,6 @@ int db_insert(int64_t key, char* value){
 		n = dequeue();
 		if(n->pagenum == 0)
 			n->pagenum =file_alloc_page();
-		
 		page = node_to_page(n);
 		file_write_page(n->pagenum, page); 
     }
@@ -83,22 +82,23 @@ int db_delete(int64_t key){
         return -1;
     }
 
-  if(find_leaf(root, key, false) == NULL){ 
+  	if(find_leaf(root, key, false) == NULL){ 
         return -1;
     }
-   root = delete(root,key);
-   while( queue!= NULL){
+   	root = delete(root,key);
+   	while( queue!= NULL){
         n = dequeue();
         if(n->num_keys == 0){
         	file_free_page(n->pagenum);
-        	continue;
-        }    
-        page = node_to_page(n);
-       file_write_page(n->pagenum, page);
-    }
-    
-	if(root->pagenum != header->rootPageNum ){
-		header->rootPageNum = n->pagenum;
+        }
+		else{    
+	        page = node_to_page(n);
+	       	file_write_page(n->pagenum, page);
+		}
+	}
+    file_read_page(0,header);
+	if(root == NULL || root->pagenum != header->rootPageNum ){		
+		header->rootPageNum = root ? root->pagenum : 0;
 		file_write_page(0, header);	
 	}
     return 0;
@@ -146,7 +146,10 @@ void make_free(){
 page_t* node_to_page(node *n){
     page_t *page = init_page();
     node *tmp;
-    record *tmp_record;  
+    record *tmp_record;
+	if(!n){
+		return page;
+	}  
     page->is_leaf = n->is_leaf;
 	page->num_keys= n->num_keys;	
     if(n->parent == NULL)
@@ -164,7 +167,6 @@ page_t* node_to_page(node *n){
 
         for(int i =0; i< n->num_keys; i++){
             page->key[i] = n->keys[i];
-			//page->record[i] = n->pointers[i];
 			tmp_record = n->pointers[i];
             strncpy(page->record[i].value, tmp_record->value, VALUE_SIZE);
         }
@@ -204,8 +206,6 @@ node* page_to_node(page_t *page, pagenum_t pagenum){
             n->keys[i] = page->key[i];
             temp = make_record(page->record[i].value);
             n->pointers[i] = temp;
-			//strncpy(temp->value, page->record[i].value,VALUE_SIZE);
-			//temp->value = page->record[i].value = temp->value
         }
         n->pointers[LEAF_ORDER-1] = NULL;
     }
@@ -224,15 +224,17 @@ node* syncFileAndTree(){
     	root = destroy_tree(root);
     }
    	header = init_page();
-   	
+   	parentpage = init_page();
+   	childpage = init_page();
     file_read_page(0, header);
     if(header->rootPageNum == 0)
         return root;
-   	parentpage = init_page();
+   	
     file_read_page(header->rootPageNum, parentpage);
 	
     root = page_to_node(parentpage, header->rootPageNum);
-    
+    if(parentpage->pointer == 0)
+    	return root;
 	enqueue(root);
     
     while ( queue ){
@@ -240,7 +242,7 @@ node* syncFileAndTree(){
         parent= dequeue();
         if(!parent->is_leaf){
         	file_read_page(parent->pagenum, parentpage);
-      		childpage = init_page();
+      		
         	file_read_page(parentpage->pointer, childpage);
 
             

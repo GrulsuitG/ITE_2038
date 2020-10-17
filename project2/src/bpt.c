@@ -526,7 +526,7 @@ node * insert_into_leaf_after_splitting(node * root, node * leaf, int64_t key, r
 
     leaf->num_keys = 0;
 
-    split = cut(order);
+    split = cut(order-1);
 
     for (i = 0; i < split; i++) {
         leaf->pointers[i] = temp_pointers[i];
@@ -553,7 +553,9 @@ node * insert_into_leaf_after_splitting(node * root, node * leaf, int64_t key, r
 
     new_leaf->parent = leaf->parent;
     new_key = new_leaf->keys[0];
-
+	
+	//enqueue(new_leaf);
+	//enqueue(leaf);
 
     return insert_into_parent(root, leaf, new_key, new_leaf);
 }
@@ -600,7 +602,7 @@ node * insert_into_node_after_splitting(node * root, node * old_node, int left_i
      * Then create a new node and copy half of the 
      * keys and pointers to the old node and
      * the other half to the new.
-     */
+ */
 
     temp_pointers = malloc( (order + 1) * sizeof(node *) );
     if (temp_pointers == NULL) {
@@ -649,16 +651,16 @@ node * insert_into_node_after_splitting(node * root, node * old_node, int left_i
     free(temp_pointers);
     free(temp_keys);
     new_node->parent = old_node->parent;
-    for (i = 0; i <= new_node->num_keys; i++) {
+	for (i = 0; i <= new_node->num_keys; i++) {
         child = new_node->pointers[i];
         child->parent = new_node;
-		enqueue(child);
+		if(child->next ==NULL)
+			enqueue(child);
     }
     /* Insert a new key into the parent of the two
      * nodes resulting from the split, with
      * the old node to the left and the new to the right.
      */
-
     return insert_into_parent(root, old_node, k_prime, new_node);
 }
 
@@ -862,6 +864,16 @@ node * remove_entry_from_node(node * n, int64_t key, node * pointer) {
     else
         for (i = n->num_keys + 1; i < order; i++)
             n->pointers[i] = NULL;
+/*	if(n->is_leaf){
+		enqueue(n);
+	}*/
+	if(!n->is_leaf){
+		if(pointer->next ==NULL)
+			enqueue(pointer);
+		if(n->next ==NULL)
+			enqueue(n);
+	}
+	
 	return n;
 }
 
@@ -874,10 +886,11 @@ node * adjust_root(node * root) {
      * Key and pointer have already been deleted,
      * so nothing to be done.
      */
-
-    if (root->num_keys > 0)
-        return root;
-
+    if (root->num_keys > 0){
+    	if(root->next == NULL)
+			enqueue(root);
+		return root;
+	}
     /* Case: empty root. 
      */
 
@@ -887,15 +900,18 @@ node * adjust_root(node * root) {
     if (!root->is_leaf) {
 		new_root = root->pointers[0];
         new_root->parent = NULL;
-		enqueue(new_root);
+		if(new_root->next== NULL)
+			enqueue(new_root);
     }
 
     // If it is a leaf (has no children),
     // then the whole tree is empty.
 
-    else
+    else{
         new_root = NULL;
-    enqueue(root);
+	}
+	if(root->next ==NULL)
+		enqueue(root);
 	return new_root;
 }
 
@@ -915,12 +931,15 @@ node * coalesce_nodes(node * root, node * n, node * neighbor, int neighbor_index
      * extreme left and neighbor is to its right.
      */
     if (neighbor_index == -1) {
-        tmp = n;
-        n = neighbor;
-        neighbor = tmp;
 		pagenum = neighbor->pagenum;
 		neighbor->pagenum = n->pagenum;
 		n->pagenum = pagenum;
+        tmp = n;
+        n = neighbor;
+        neighbor = tmp;
+		//pagenum = neighbor->pagenum;
+		//neighbor->pagenum = n->pagenum;
+		//n->pagenum = pagenum;
 		
     }
 
@@ -967,9 +986,10 @@ node * coalesce_nodes(node * root, node * n, node * neighbor, int neighbor_index
         for (i = 0; i < neighbor->num_keys + 1; i++) {
             tmp = (node *)neighbor->pointers[i];
             tmp->parent = neighbor;
-			enqueue(tmp->parent);
+			//enqueue(tmp->parent);
         }
-		enqueue(neighbor);
+		if(neighbor->next == NULL)
+			enqueue(neighbor);
     }
 
     /* In a leaf, append the keys and pointers of
@@ -979,17 +999,21 @@ node * coalesce_nodes(node * root, node * n, node * neighbor, int neighbor_index
      */
 
     else {
-        for (i = neighbor_insertion_index, j = 0; j < n->num_keys; i++, j++) {
+		for (i = neighbor_insertion_index, j = 0; j < n->num_keys; i++, j++) {
             neighbor->keys[i] = n->keys[j];
             neighbor->pointers[i] = n->pointers[j];
             neighbor->num_keys++;
         }
 		n->num_keys =0;
-		enqueue(n);
         neighbor->pointers[LEAF_ORDER - 1] = n->pointers[LEAF_ORDER - 1];
-    }
-	return delete_entry(root, n->parent, k_prime ,n);
-	;
+    	}
+	
+	if(neighbor_index == -1){
+		return delete_entry(root, neighbor->parent,k_prime, n); 
+	}
+	else{
+		return delete_entry(root, n->parent, k_prime ,n);
+	}
 }
 
 
@@ -1063,9 +1087,12 @@ node * redistribute_nodes(node * root, node * n, node * neighbor, int neighbor_i
     /* n now has one more key and one more pointer;
      * the neighbor has one fewer of each.
      */
-	enqueue(n);
-	enqueue(neighbor);
-	enqueue(n->parent);
+	if(n->next == NULL)
+		enqueue(n);
+	if(neighbor->next == NULL)
+		enqueue(neighbor);
+	if(n->parent->next == NULL)
+		enqueue(n->parent);
     n->num_keys++;
     neighbor->num_keys--;
 
@@ -1086,9 +1113,6 @@ node * delete_entry( node * root, node * n, int64_t key, void * pointer ) {
 	int64_t k_prime;
     // Remove key and pointer from node.
     n = remove_entry_from_node(n, key, pointer);
-	if(!n->is_leaf){
-		enqueue(n);		
-	}
     /* Case:  deletion from the root. 
      */
 	if(n ==root){
@@ -1128,9 +1152,13 @@ node * delete_entry( node * root, node * n, int64_t key, void * pointer ) {
     k_prime = n->parent->keys[k_prime_index];
     neighbor = neighbor_index == -1 ? n->parent->pointers[1] : 
     n->parent->pointers[neighbor_index];
-
+	/*if(n->is_leaf){
+		if(neighbor_index != -1)
+			neighbor->pointers[LEAF_ORDER-1] = n->pointers[LEAF_ORDER-1];
+		return delete_entry(root, n->parent,key, n);
+	}*/
 	/* Coalescence. */
-	if(n->is_leaf ||neighbor->num_keys != INTERNAL_ORDER-1)
+	if(neighbor->num_keys != INTERNAL_ORDER-1)
     	return coalesce_nodes(root, n, neighbor, neighbor_index, k_prime);
 
     /* Redistribution. */

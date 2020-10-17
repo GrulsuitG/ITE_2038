@@ -21,39 +21,52 @@ int main(){
 	int* list;
 	srand(time(0));
 	//printf("%d",open_table("db"));
-	printf("%d",open_table("gg"));
-	open_table("db");
+	//printf("%d",open_table("gg"));
+	open_table("dddd");
 	//printf("%d",open_table("db"));
-	print_tree(root);
-	/*for(i = 0; i< 1000; i++){
+	/*print_tree(root);
+	for(i = 0; i< 1000; i++){
 		num = rand()%100;	
 		if(!db_find(num, value))	
 			printf("%d : %s\n",num,value);
 	}
 	//print_tree(root);
 	//db_insert(11111, "asdasd");
-	print_tree(root);
+	print_tree(root)c;
 	//print_tree(root);
 	//open_table("dd");*/
-/*	for( i = 0; i< 1000; i++){
+	for( i = 0; i< 500; i++){
 		num = rand()%10000;	
 		get_random_str(c);	
 		//printf("%d %s\n", num, c);
 		db_insert(num,c);
+		//print_tree(root);
 
 	}
-
 print_tree(root);
-/*
+num =open_table("asdf");
+printf("===================cur table:[%d]=======================\n", num);
+num=open_table("dddd");
+printf("===================cur table:[%d]=======================\n", num);
+print_tree(root);
 printf("=========================================\n");
-for( i = 0; i< 30; i++){
-		num = rand()% 200;	
+for(i = 0; i< 20; i++){
+		num = rand()%10000;	
+		if(!db_find(num, value))	
+			printf("%d : %s\n",num,value);
+	}
+
+printf("=========================================\n");
+for( i = 0; i< 1000; i++){
+		num = rand()% 10000;	
 		get_random_str(c);	
 		//printf("%d %s\n", num, c);
 		db_delete(num);
 //print_tree(root);
 	}
-print_tree(root);*/
+print_tree(root);
+
+//print_tree(root);*/
 }
 
 
