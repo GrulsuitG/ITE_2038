@@ -35,36 +35,40 @@ int main(){
 	print_tree(root)c;
 	//print_tree(root);
 	//open_table("dd");*/
-	for( i = 0; i< 500; i++){
+	for( i = 50; i> 0; i--){
 		num = rand()%10000;	
 		get_random_str(c);	
 		//printf("%d %s\n", num, c);
-		db_insert(num,c);
-		//print_tree(root);
+		db_insert(i,c);
+		print_tree(root);
 
 	}
-print_tree(root);
+//print_tree(root);
 num =open_table("asdf");
 printf("===================cur table:[%d]=======================\n", num);
 num=open_table("dddd");
 printf("===================cur table:[%d]=======================\n", num);
-print_tree(root);
+//print_tree(root);
 printf("=========================================\n");
-for(i = 0; i< 20; i++){
-		num = rand()%10000;	
+for(i = 0; i <10; i++){
+		num = rand()%50;	
 		if(!db_find(num, value))	
 			printf("%d : %s\n",num,value);
 	}
 
 printf("=========================================\n");
-for( i = 0; i< 1000; i++){
+for( i = 50; i> 0; i--){
 		num = rand()% 10000;	
 		get_random_str(c);	
 		//printf("%d %s\n", num, c);
-		db_delete(num);
-//print_tree(root);
-	}
+		db_delete(i);
 print_tree(root);
+	}
+list = get_freelist();
+for(i=0; i<0x2a; i++){
+	printf("[%d] : %d \n", i, list[i]);
+}
+//print_tree(root);
 
 //print_tree(root);*/
 }
