@@ -22,7 +22,7 @@ int main(){
 	srand(time(0));
 	//printf("%d",open_table("db"));
 	//printf("%d",open_table("gg"));
-	open_table("aaaa");
+	open_table("a");
 	//printf("%d",open_table("db"));
 	/*print_tree(root);
 	for(i = 0; i< 1000; i++){
@@ -35,8 +35,8 @@ int main(){
 	print_tree(root)c;
 	//print_tree(root);
 	//open_table("dd");*/
-	for( i = 0; i< 1000; i++){
-		num = rand()%2000;	
+	for( i = 0; i< 300; i++){
+		num = rand()%500;	
 		get_random_str(c);	
 		//printf("%d %s\n", num, c);
 		db_insert(num,c);
@@ -59,15 +59,18 @@ for(i = 1; i <=50; i++){
 			printf("%d : %s\n",i,value);
 	}
 */
-/*
-printf("=========================================\n");
-for( i = 50; i> 0; i--){
-		num = rand()% 10000;	
-		get_random_str(c);	
+
+//printf("=========================================\n");
+//print_tree();
+for( i = 0; i< 200; i++){
+		num = rand()% 500;	
+		get_random_str(c);
+		//printf("delete :%d\n", num);	
 		//printf("%d %s\n", num, c);
-		db_delete(i);
-print_tree(root);
+		db_delete(num);
 	}
+print_tree();
+/*
 list = get_freelist();
 for(i=0; i<0x2a; i++){
 	printf("[%d] : %d \n", i, list[i]);

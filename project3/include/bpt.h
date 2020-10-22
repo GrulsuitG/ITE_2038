@@ -142,15 +142,14 @@ void insert(pagenum_t *root, int64_t key, char *value );
 
 // Deletion.
 
-int get_neighbor_index( node * n );
-node * adjust_root(node * root);
-node * coalesce_nodes(node * root, node * n, node * neighbor,
-                      int neighbor_index, int64_t k_prime);
-node * redistribute_nodes(node * root, node * n, node * neighbor,
-                          int neighbor_index,
-        int k_prime_index, int64_t k_prime);
-node * delete_entry( node * root, node * n, int64_t key, void * pointer );
-node * delete( node * root, int64_t key );
+int get_neighbor_index( page_t *p );
+pagenum_t adjust_root(pagenum_t *root);
+pagenum_t coalesce_nodes(pagenum_t *root, page_t *p, page_t *parent, page_t *neighbor, int neighbor_index, int64_t k_prime);
+pagenum_t redistribute_nodes(pagenum_t *root, page_t *p, page_t *parent ,page_t *neighbor,
+         int neighbor_index,int k_prime_index, int64_t k_prime);
+pagenum_t delete_entry( pagenum_t *root, page_t *p, int64_t key, pagenum_t pagenum);
+page_t * remove_entry_from_page(page_t *p, int64_t key, pagenum_t pagenum);
+void delete( pagenum_t *root, int64_t key);
 
 void destroy_tree_nodes(node * root);
 node * destroy_tree(node * root);

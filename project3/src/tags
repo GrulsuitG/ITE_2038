@@ -8,10 +8,11 @@ Version	bpt.c	4;"	d	file:
 adjust_root	bpt.c	/^node * adjust_root(node * root) {$/;"	f
 coalesce_nodes	bpt.c	/^node * coalesce_nodes(node * root, node * n, node * neighbor, int neighbor_index, int64_t k_prime) {$/;"	f
 cut	bpt.c	/^int cut( int length ) {$/;"	f
+db_delete	db.c	/^int db_delete(int64_t key){$/;"	f
 db_find	db.c	/^int db_find(int64_t key, char *ret_val){$/;"	f
 db_insert	db.c	/^int db_insert(int64_t key, char* value){$/;"	f
-delete	bpt.c	/^node * delete(node * root, int64_t key) {$/;"	f
-delete_entry	bpt.c	/^node * delete_entry( node * root, node * n, int64_t key, void * pointer ) {$/;"	f
+delete	bpt.c	/^void delete(pagenum_t *root, int64_t key) {$/;"	f
+delete_entry	bpt.c	/^pagenum_t delete_entry( pagenum_t *root, page_t *p, int64_t key, pagenum_t pagenum) {$/;"	f
 dequeue	bpt.c	/^node * dequeue( void ) {$/;"	f
 destroy_tree	bpt.c	/^node * destroy_tree(node * root) {$/;"	f
 destroy_tree_nodes	bpt.c	/^void destroy_tree_nodes(node * root) {$/;"	f
@@ -21,23 +22,22 @@ file_free_page	file.c	/^void file_free_page(pagenum_t pagenum){$/;"	f
 file_read_page	file.c	/^void file_read_page(pagenum_t pagenum, page_t* dest){$/;"	f
 file_write_page	file.c	/^void file_write_page(pagenum_t pagenum, const page_t* src){$/;"	f
 filename	file.c	/^char* filename;$/;"	v
-find	bpt.c	/^record* find(int64_t key) {$/;"	f
-find_leaf	bpt.c	/^page_t* find_leaf( pagenum_t root, int64_t key) {$/;"	f
-free_node	bpt.c	/^void free_node(node* n){$/;"	f
+find	bpt.c	/^record* find(pagenum_t *root, int64_t key) {$/;"	f
+find_leaf	bpt.c	/^page_t* find_leaf( pagenum_t *root, int64_t key) {$/;"	f
 free_page	file.c	/^void free_page(page_t *page){$/;"	f
 get_freelist	file.c	/^int* get_freelist(){$/;"	f
-get_left_index	bpt.c	/^int get_left_index(node * parent, node * left) {$/;"	f
+get_left_index	bpt.c	/^int get_left_index(page_t *parent, pagenum_t left) {$/;"	f
 get_neighbor_index	bpt.c	/^int get_neighbor_index( node * n ) {$/;"	f
 get_random_number	main.c	/^int get_random_number(int from, int to) {$/;"	f
 get_random_str	main.c	/^void get_random_str(char* data) {$/;"	f
 init_page	file.c	/^page_t* init_page(){$/;"	f
-insert	bpt.c	/^void * insert(int64_t key, char *value ) {$/;"	f
-insert_into_leaf	bpt.c	/^node * insert_into_leaf( node * leaf, int64_t key, record * pointer ) {$/;"	f
-insert_into_leaf_after_splitting	bpt.c	/^node * insert_into_leaf_after_splitting(node * root, node * leaf, int64_t key, record * pointer) {$/;"	f
-insert_into_new_root	bpt.c	/^node * insert_into_new_root(node * left, int64_t key, node * right) {$/;"	f
-insert_into_node	bpt.c	/^node * insert_into_node(node * root, node * n, $/;"	f
-insert_into_node_after_splitting	bpt.c	/^node * insert_into_node_after_splitting(node * root, node * old_node, int left_index, $/;"	f
-insert_into_parent	bpt.c	/^node * insert_into_parent(node * root, node * left, int64_t key, node * right) {$/;"	f
+insert	bpt.c	/^ void insert(pagenum_t *root, int64_t key, char *value ) {$/;"	f
+insert_into_leaf	bpt.c	/^void insert_into_leaf( page_t * leaf, int64_t key, record * pointer ) {$/;"	f
+insert_into_leaf_after_splitting	bpt.c	/^pagenum_t insert_into_leaf_after_splitting(pagenum_t *root, page_t * leaf, int64_t key, record * pointer) {$/;"	f
+insert_into_new_root	bpt.c	/^pagenum_t insert_into_new_root(page_t *left, int64_t key, page_t *right) {$/;"	f
+insert_into_node	bpt.c	/^void insert_into_node(page_t *p, int left_index, $/;"	f
+insert_into_node_after_splitting	bpt.c	/^pagenum_t insert_into_node_after_splitting(pagenum_t *root, page_t *old_page, int left_index, $/;"	f
+insert_into_parent	bpt.c	/^pagenum_t insert_into_parent(pagenum_t *root,page_t *left, int64_t key, page_t *right) {$/;"	f
 main	main.c	/^int main(){$/;"	f
 make_file	file.c	/^void make_file(){$/;"	f
 make_leaf	bpt.c	/^node * make_leaf( void ) {$/;"	f
@@ -47,11 +47,11 @@ node_to_page	bpt.c	/^ page_t* node_to_page(node *n){$/;"	f
 open_table	db.c	/^int open_table(char* pathname){$/;"	f
 page_to_node	bpt.c	/^node* page_to_node(page_t *page, pagenum_t pagenum){$/;"	f
 path_to_root	bpt.c	/^int path_to_root( node * root, node * child ) {$/;"	f
-print_tree	bpt.c	/^void print_tree(node * root) {$/;"	f
+print_tree	bpt.c	/^void print_tree() {$/;"	f
 queue	bpt.c	/^node * queue = NULL;$/;"	v
 redistribute_nodes	bpt.c	/^node * redistribute_nodes(node * root, node * n, node * neighbor, int neighbor_index, $/;"	f
-remove_entry_from_node	bpt.c	/^node * remove_entry_from_node(node * n, int64_t key, node * pointer) {$/;"	f
+remove_entry_from_page	bpt.c	/^page_t* remove_entry_from_page(page_t *p, int64_t key, pagenum_t pagenum) {$/;"	f
 root	bpt.c	/^node* root;$/;"	v
-start_new_tree	bpt.c	/^void start_new_tree(int64_t key, record * pointer) {$/;"	f
+start_new_tree	bpt.c	/^pagenum_t start_new_tree(int64_t key, record * pointer) {$/;"	f
 syncFileAndTree	bpt.c	/^node* syncFileAndTree(){$/;"	f
 verbose_output	bpt.c	/^bool verbose_output = false;$/;"	v

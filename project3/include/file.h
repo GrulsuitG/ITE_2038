@@ -7,8 +7,8 @@
 #ifndef SIZE_ORDER
 #define SIZE_ORDER
 #define VALUE_SIZE 120
-#define LEAF_ORDER 4
-#define INTERNAL_ORDER 6
+#define LEAF_ORDER 32
+#define INTERNAL_ORDER 249
 #endif
 
 
