@@ -22,49 +22,67 @@ int main(){
 	srand(time(0));
 	//printf("%d",open_table("db"));
 	//printf("%d",open_table("gg"));
-	open_table("dddd");
+	open_table("ccb");
+	
 	//printf("%d",open_table("db"));
-	/*print_tree(root);
-	for(i = 0; i< 1000; i++){
+	print_tree(root);
+	//db_insert(11111, "asdasd");
+	//print_tree(root);
+/*	for(i = 0; i< 2000; i++){
 		num = rand()%100;	
 		if(!db_find(num, value))	
 			printf("%d : %s\n",num,value);
 	}
 	//print_tree(root);
-	//db_insert(11111, "asdasd");
+	
 	print_tree(root)c;
 	//print_tree(root);
 	//open_table("dd");*/
-	for( i = 50; i> 0; i--){
-		num = rand()%10000;	
+	/*for( i = 0; i< 10000; i++){
+		//num = rand()%10000;	
 		get_random_str(c);	
 		//printf("%d %s\n", num, c);
-		db_insert(i,c);
-		print_tree(root);
+		if(!db_insert(i,c))
+			printf("[%d]success\n", i);
+		else
+			printf("[%d]fail\n", i);		
+		//print_tree(root);
 
 	}
+	print_tree(root);
 //print_tree(root);
-num =open_table("asdf");
-printf("===================cur table:[%d]=======================\n", num);
-num=open_table("dddd");
-printf("===================cur table:[%d]=======================\n", num);
+//num =open_table("asdf");
+//printf("===================cur table:[%d]=======================\n", num);
+//num=open_table("dddd");
+//printf("===================cur table:[%d]=======================\n", num);
 //print_tree(root);
-printf("=========================================\n");
-for(i = 0; i <10; i++){
-		num = rand()%50;	
-		if(!db_find(num, value))	
-			printf("%d : %s\n",num,value);
-	}
+//printf("=========================================\n");
 
-printf("=========================================\n");
-for( i = 50; i> 0; i--){
-		num = rand()% 10000;	
-		get_random_str(c);	
+//print_tree(root);*/
+/*for( i = 0; i< 20; i++){
+		//num = rand()% 10000;	
+		//get_random_str(c);	
 		//printf("%d %s\n", num, c);
-		db_delete(i);
+		db_delete(i+10000);
+}
 print_tree(root);
+*/
+/*for(i = 0; i <10000; i++){
+		//num = rand()%50;	
+		if(!db_find(i, value))	
+			printf("%d : %s\n",i,value);
 	}
-list = get_freelist();
+
+//printf("=========================================\n");
+/*for( i = 0; i< 1000; i++){
+		//num = rand()% 10000;	
+		//get_random_str(c);	
+		//printf("%d %s\n", num, c);
+		db_delete(i+1000);
+//print_tree(root);
+	}
+print_tree(root);
+/*list = get_freelist();
 for(i=0; i<0x2a; i++){
 	printf("[%d] : %d \n", i, list[i]);
 }
@@ -78,7 +96,7 @@ for(i=0; i<0x2a; i++){
 /*
 int main() {
     char instruction;
-	char* str = malloc(100);
+	char* str = malloc(120);
     int64_t key, range2;
 	int aa;
     
@@ -114,15 +132,6 @@ int main() {
             else
                 printf("find fail\n");
             break;
-        case 'r':
-            scanf("%ld %ld", &key, &range2);
-            if (key > range2) {
-                int tmp = range2;
-                range2 = key;
-                key = tmp;
-            }
-            find_and_print_range(root, key, range2, instruction == 'p');
-            break;
         case 'l':
             print_leaves(root);
             break;
@@ -148,7 +157,7 @@ int main() {
 		break;
         
         default:
-            usage_2();
+ //           usage_2();
             break;
         }
         while (getchar() != '\n');

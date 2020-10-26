@@ -14,13 +14,13 @@ pagenum_t file_alloc_page(){
 		exit(EXIT_FAILURE);
 	}
 
-	lseek(fd,PAGE_SIZE*header->freePageNum,SEEK_SET);
+	/*lseek(fd,PAGE_SIZE*header->freePageNum,SEEK_SET);
 	if(read(fd, &read_info, sizeof(pagenum_t)) < 0){
         perror("file read error for alloc");
         exit(EXIT_FAILURE);
-    }
+    }*/
 
-	if(read_info == 0){
+	if(header->freePageNum == 0){
 	
 		pagenum = header->numOfPage;
 		lseek(fd,0,SEEK_END);
@@ -62,12 +62,19 @@ pagenum_t file_alloc_page(){
             exit(EXIT_FAILURE);
         }
         
+        return file_alloc_page();
+        
 	}
     //write next free page num
     else{
-        lseek(fd, 0, SEEK_SET);
-        if(write(fd, &read_info, sizeof(pagenum_t)) < 0){
+        lseek(fd, header->freePageNum*PAGE_SIZE, SEEK_SET);
+        if(read(fd, &read_info, sizeof(pagenum_t)) < 0){
             perror("file write error 5 for alloc");
+            exit(EXIT_FAILURE);
+        }
+        lseek(fd,0, SEEK_SET);
+        if(write(fd, &read_info,sizeof(pagenum_t)) <0){
+            perror("file write error 4 for alloc");
             exit(EXIT_FAILURE);
         }
     }

@@ -9,6 +9,7 @@
 typedef struct buf_ctrl_block{
 	void* frame;
 	int table_id;
+	int id;
 	pagenum_t pagenum;
 	bool is_dirty;
 	bool ref_bit;
@@ -24,16 +25,25 @@ int buf_size;
 buf_ctrl_block* head;
 buf_ctrl_block* tail;
 
-void make_buf(int size);
+int make_buf(int size);
 
 
 
 page_t* buf_read_page(int table_id, pagenum_t pagenum);
 void buf_return_page(int table_id, pagenum_t pagenum, bool is_dirty);
-void buf_write_page(int table_id, pagenum_t pagenum, page_t* src);
 page_t* buf_alloc_page(int table_id);
 void buf_free_page(int table_id, pagenum_t pagenum);
 
-int get_page(int table_id, pagenum_t pagenum);
+void enList(int index);
+
+int find_empty(int table_id, pagenum_t pagenum);
+int find_place(int iable_id, pagenum_t pagenum);
+
+int eviction();
+
+int buf_close_table(int table_id);
+void buf_destroy();
+
+void print_buf();
 
 #endif

@@ -22,13 +22,17 @@ int main(){
 	srand(time(0));
 	//printf("%d",open_table("db"));
 	//printf("%d",open_table("gg"));
+	init_db(10);
 	list[0] = open_table("a");
 	list[1] = open_table("b");
 	list[2] = open_table("c");
 	list[3] = open_table("d");
+	for(i =0; i< 10; i++){
+		printf("prev :%d, cur : %d, next %d\n", block[i]->prev->id, block[i]->id, block[i]->next->id);
+	}
 	
-	for(i = 0; i<4; i++){
-		printf("[%d] : %s\n", list[i], table_name[list[i]-1]);
+	/*for(i = 0; i<4; i++){
+		printf("[%d] :%s\n", list[i], tableList[list[i]-1].name);
 	}
 	//printf("%d",open_table("db"));
 	/*print_tree(root);
@@ -42,15 +46,20 @@ int main(){
 	print_tree(root)c;
 	//print_tree(root);
 	//open_table("dd");*/
-/*	for( i = 0; i< 300; i++){
-		num = rand()%500;	
+	for( i = 0; i< 2; i++){
+		num = (rand()%4) + 1;	
 		get_random_str(c);	
 		//printf("%d %s\n", num, c);
-		db_insert(num,c);
-		
-
+		db_insert(1,i,c);
+		//printf("%d\n", head->id);
+		print_buf();
 	}
-print_tree();
+
+close_table(1);
+print_tree(1);
+/*print_tree(2);
+print_tree(3);
+print_tree(4);
 /*
 //print_tree(root);
 num =open_table("asdf");

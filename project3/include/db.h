@@ -4,9 +4,10 @@
 
 
 #define MAX_PATH_LENGTH 20
-int unique_id;
 
+bool init;
 
+//extern table tableList[MAX_TABLE_NUM];
 
 
 int init_db(int num_buf);

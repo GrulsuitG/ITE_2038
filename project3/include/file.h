@@ -20,13 +20,13 @@
 #include<fcntl.h>
 #include<unistd.h>
 #include<string.h>
+#include<stdbool.h>
 #ifndef O_DIRECT
 #define O_DIRECT 00040000
 #endif
 
-extern char* filename;
 
-extern char* table_name[MAX_TABLE_NUM];
+
 
 typedef uint64_t pagenum_t;
 
@@ -55,11 +55,19 @@ typedef struct page_t{
 	pagenum_t mypage;
 }page_t;
 
+typedef struct table{
+	char* name;
+	bool is_open;
+}table;
+
+
+extern table tableList[MAX_TABLE_NUM];
+
 pagenum_t file_alloc_page(int table_id);
 void file_free_page(int table_id, pagenum_t pagenum);
 void file_read_page(int table_id, pagenum_t pagenum, page_t* dest);
 void file_write_page(int table_id, pagenum_t pagenum, const page_t* src);
-
+void file_write_root(int table_id, pagenum_t pagenum);
 void make_file(char* filename);
 int* get_freelist(int table_id);
 page_t* init_page();
