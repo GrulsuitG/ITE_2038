@@ -54,8 +54,18 @@ void buf_return_page(int table_id, pagenum_t pagenum, bool is_dirty){
 	int index = find_place(table_id, pagenum);
 
 	block[index] -> pin_count--;
-	blocl[index] -> is_dirty = is_dirty;
+	block[index] -> is_dirty = is_dirty;
 	block[index] -> ref_bit = true;
+
+	block[index]->next->prev = block[index]->prev;
+	block[index]->prev->next = block[index]->next;
+
+	head->next = block[index];
+	block[index]->prev = head;
+	block[index]->next = prev;
+	head = block[index];
+
+
 }
 
 void buf_write_page(int table_id, pagenum_t pagenum, page_t *src){
@@ -65,9 +75,58 @@ void buf_write_page(int table_id, pagenum_t pagenum, page_t *src){
 }
 
 page_t* buf_alloc_page(int table_id){
+	pagenum_t pagenum = file_alloc_page(table_id);
+	int index = find_empty(table_id, pagenum);
+	
+	int head_index = find_place(table_id , 0);
+	page_t *header = init_page();
+	file_read_page(table_id, 0, header);
+	
+	if(buf_pool[head_index]->numOfPage != header->numOfPage){
+		buf_pool[head_index]->numOfPage = header->numOfPage;
+		buf_pool[head_index]->freePageNum = header->freePageNum;
+	}
+	else
+		buf_pool[head_idex]->freePageNum++;
+	
+	block[head_index]->is_dirty = true;
+	block[head_index]->ref_bit = true;
 
+	enList(head_index);
+
+
+	buf_pool[index]->mypage =pagenum;
+
+	block[index]->pagenum = pagenum;
+	block[index]->table_id = table_id;
+	block[index]->pin_count++;
+	block[index]->ref_bit = true;
+
+	enList(index);
+	
+	return buf_pool[index];
+}
+void buf_free_page(int table_id, pagenum_t pagenum){
+	
 }
 
-void buf_free_page(int table_id, pagenum_t pagenum){
-
+void enList(int index){
+	if(!head){
+		head = block[index];
+		tail = block[index];
+		head->next = tail;
+		head->prev = tail;
+		tail->next = head;
+		tail->prev = head;
+	}
+	else {
+		if(block[index]->next){
+			block[index]->next->prev = block[index]->prev;
+			block[index]->prev->next = block[index]->next;
+		}
+		head->next = block[index];
+		block[index]->next =tail;
+		block[index]->prev = head;
+		head = block[index];
+	}
 }

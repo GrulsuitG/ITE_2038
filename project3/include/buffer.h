@@ -21,6 +21,9 @@ page_t **buf_pool;
 buf_ctrl_block **block;
 int buf_size;
 
+buf_ctrl_block* head;
+buf_ctrl_block* tail;
+
 void make_buf(int size);
 
 
