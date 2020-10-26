@@ -18,11 +18,18 @@ int main(){
 	int num, i;
 	char c[120];
 	char* value = malloc(120);
-	int* list;
+	int list[10];
 	srand(time(0));
 	//printf("%d",open_table("db"));
 	//printf("%d",open_table("gg"));
-	open_table("a");
+	list[0] = open_table("a");
+	list[1] = open_table("b");
+	list[2] = open_table("c");
+	list[3] = open_table("d");
+	
+	for(i = 0; i<4; i++){
+		printf("[%d] : %s\n", list[i], table_name[list[i]-1]);
+	}
 	//printf("%d",open_table("db"));
 	/*print_tree(root);
 	for(i = 0; i< 1000; i++){
@@ -35,7 +42,7 @@ int main(){
 	print_tree(root)c;
 	//print_tree(root);
 	//open_table("dd");*/
-	for( i = 0; i< 300; i++){
+/*	for( i = 0; i< 300; i++){
 		num = rand()%500;	
 		get_random_str(c);	
 		//printf("%d %s\n", num, c);
@@ -62,7 +69,7 @@ for(i = 1; i <=50; i++){
 
 //printf("=========================================\n");
 //print_tree();
-for( i = 0; i< 200; i++){
+/*for( i = 0; i< 200; i++){
 		num = rand()% 500;	
 		get_random_str(c);
 		//printf("delete :%d\n", num);	

@@ -18,7 +18,8 @@ STATIC_LIB:=$(LIBS)libbpt.a
 SRCS_FOR_LIB:= \
     $(SRCDIR)bpt.c \
     $(SRCDIR)file.c \
-    $(SRCDIR)db.c
+    $(SRCDIR)db.c \
+	$(SRCDIR)buffer.c
 
 OBJS_FOR_LIB:=$(SRCS_FOR_LIB:.c=.o)
 

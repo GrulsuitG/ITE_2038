@@ -3,24 +3,20 @@
 #include"bpt.h"
 
 
-#define MAX_TABLE_NUM 10
-
+#define MAX_PATH_LENGTH 20
 int unique_id;
-extern char* filename;
-char* table_name[MAX_TABLE_NUM];
 
 
+
+
+int init_db(int num_buf);
 int open_table(char *pathname);
-int db_insert(int64_t key, char *value);
-int db_find(int64_t key, char *ret_val);
-int db_delete(int64_t key);
+int db_insert(int table_id, int64_t key, char *value);
+int db_find(int table_id, int64_t key, char *ret_val);
+int db_delete(int table_id, int64_t key);
+int close_table(int table_id);
+int shutdown_db();
 
 void make_free();
 
-page_t* node_to_page(node *node);
-node* page_to_node(page_t *page, pagenum_t pagenum);
-
-node* syncFileAndTree();
-
-void close_table();
 #endif

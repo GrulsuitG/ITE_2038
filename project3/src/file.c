@@ -1,13 +1,14 @@
 #include "file.h"
 
-char* filename;
+char* table_name[MAX_TABLE_NUM];
 
-pagenum_t file_alloc_page(){
+pagenum_t file_alloc_page(int table_id){
+	char* filename = table_name[table_id-1];
 	pagenum_t pagenum, num;
 	page_t* header=init_page();
 	int fd;
 	pagenum_t read_info;
-	file_read_page(0,header);
+	file_read_page(table_id, 0,header);
 	if((fd=open(filename, O_RDWR|O_SYNC)) <0){
 	    perror("file open error for alloc");
 		exit(EXIT_FAILURE);
@@ -78,7 +79,9 @@ pagenum_t file_alloc_page(){
 	return header->freePageNum;
 }
 
-void file_free_page(pagenum_t pagenum){
+void file_free_page(int table_id, pagenum_t pagenum){
+	char* filename = table_name[table_id - 1];
+	
 	int fd;
     pagenum_t read_info;
 	
@@ -116,10 +119,10 @@ void file_free_page(pagenum_t pagenum){
 	return ;
 }
 
-void file_read_page(pagenum_t pagenum, page_t* dest){
+void file_read_page(int table_id, pagenum_t pagenum, page_t* dest){
+	char* filename = table_name[table_id-1];	
+	
 	int fd;
-	char* read_info = malloc(120);
-    pagenum_t read_info2;
 	
 	if((fd = open(filename, O_RDONLY)) < 0){
 		perror("file open error for read");
@@ -215,7 +218,9 @@ void file_read_page(pagenum_t pagenum, page_t* dest){
 
 
 
-void file_write_page(pagenum_t pagenum, const page_t* src){
+void file_write_page(int table_id, pagenum_t pagenum, const page_t* src){
+	char* filename = table_name[table_id - 1];
+	
 	int fd;
 	
 	if((fd=open(filename, O_WRONLY)) < 0){
@@ -303,7 +308,7 @@ void file_write_page(pagenum_t pagenum, const page_t* src){
     return;
 }
 
-void make_file(){
+void make_file(char* filename){
 	int fd, isExist;
     pagenum_t pagenum, num;
 	isExist = access(filename, 00);
@@ -364,13 +369,15 @@ void make_file(){
 
 }
 
-int* get_freelist(){
+int* get_freelist(int table_id){
+	char* filename = table_name[table_id - 1];
+	
 	page_t *header=init_page();
 	pagenum_t pagenum;
 	int fd;
 	int *list;
 	
-	file_read_page(0, header);
+	file_read_page(table_id, 0, header);
 	list = malloc(sizeof(int) * header->numOfPage);
 	
 	if((fd = open(filename, O_RDONLY)) <0){
