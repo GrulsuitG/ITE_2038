@@ -117,7 +117,7 @@ void find_and_print(node * root, int64_t key, bool verbose);
 void find_and_print_range(node * root, int64_t range1, int64_t range2, bool verbose); 
 int find_range( node * root, int64_t key_start, int64_t key_end, bool verbose,
         int64_t returned_keys[], void * returned_pointers[]); */
-page_t * find_leaf(int table_id, pagenum_t *root, int64_t key);
+page_t * find_leaf(int table_id, pagenum_t root, int64_t key);
 record* find(int table_id, pagenum_t *root, int64_t key);
 int cut( int length );
 
@@ -128,26 +128,26 @@ node * make_node( void );
 node * make_leaf( void );
 int get_left_index(page_t *parent, pagenum_t left);
 void insert_into_leaf(int table_id,  page_t * leaf, int64_t key, record * pointer );
-pagenum_t insert_into_leaf_after_splitting(int table_id, pagenum_t *root, page_t *leaf, 
+pagenum_t insert_into_leaf_after_splitting(int table_id, pagenum_t root, page_t *leaf, 
 				int64_t key, record * pointer);
 void insert_into_node(int table_id, page_t *parent, int left_index, int64_t key, page_t *right);
-pagenum_t insert_into_node_after_splitting(int table_id, pagenum_t *root, page_t *parent,
+pagenum_t insert_into_node_after_splitting(int table_id, pagenum_t root, page_t *parent,
 		int left_index, int64_t key, page_t *right);
-pagenum_t insert_into_parent(int table_id, pagenum_t *root, page_t * left, int64_t key, page_t * right);
+pagenum_t insert_into_parent(int table_id, pagenum_t root, page_t * left, int64_t key, page_t * right);
 pagenum_t insert_into_new_root(int table_id, page_t * left, int64_t key, page_t * right);
 pagenum_t start_new_tree(int table_id, int64_t key, record * pointer);
-void insert(int table_id, pagenum_t *root, int64_t key, char *value );
+void insert(int table_id, pagenum_t root, int64_t key, char *value );
 
 // Deletion.
 
 int get_neighbor_index(int table_id,  page_t *p );
-pagenum_t adjust_root(int table_id, pagenum_t *root);
-pagenum_t coalesce_nodes(int table_id, pagenum_t *root, page_t *p, page_t *parent, page_t *neighbor, int neighbor_index, int64_t k_prime);
-pagenum_t redistribute_nodes(int table_id, pagenum_t *root, page_t *p, page_t *parent ,page_t *neighbor,
+pagenum_t adjust_root(int table_id, pagenum_t root);
+pagenum_t coalesce_nodes(int table_id, pagenum_t root, page_t *p, page_t *parent, page_t *neighbor, int neighbor_index, int64_t k_prime);
+pagenum_t redistribute_nodes(int table_id, pagenum_t root, page_t *p, page_t *parent ,page_t *neighbor,
          int neighbor_index,int k_prime_index, int64_t k_prime);
-pagenum_t delete_entry(int table_id, pagenum_t *root, page_t *p, int64_t key, pagenum_t pagenum);
+pagenum_t delete_entry(int table_id, pagenum_t root, page_t *p, int64_t key, pagenum_t pagenum);
 page_t * remove_entry_from_page(page_t *p, int64_t key, pagenum_t pagenum);
-void delete(int table_id, pagenum_t *root, int64_t key);
+void delete(int table_id, pagenum_t root, int64_t key);
 
 void destroy_tree_nodes(node * root);
 node * destroy_tree(node * root);

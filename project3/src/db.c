@@ -1,7 +1,6 @@
 #include "db.h"
 
 int unique_id = 1;
-//table tableList[MAX_TABLE_NUM];
 
 int init_db(int num_buf){
 	int i;
@@ -29,14 +28,14 @@ int open_table(char* pathname){
     for(i=0; i<(unique_id-1); i++){    	
         if( strcmp(pathname, tableList[i].name) == 0){
 		tableList[i].is_open = true;
-            return i;
+            return i+1;
         }
      }
      
     make_file(pathname);
     
-    tableList[unique_id-1].name = (char*)malloc(sizeof(pathname));
-    strncpy(tableList[unique_id-1].name , pathname, sizeof(pathname));
+    tableList[unique_id-1].name = (char*)malloc(strlen(pathname));
+    strncpy(tableList[unique_id-1].name , pathname, strlen(pathname));
     
 	tableList[unique_id-1].is_open = true;
     return unique_id++;
@@ -49,13 +48,12 @@ int db_insert(int table_id, int64_t key, char* value){
   	if(!tableList[table_id-1].is_open){
 		return -1;
 	}
-	pagenum_t *root = malloc(sizeof(pagenum_t));
-    	
-    if(find(table_id, root, key) != NULL){        
+  	pagenum_t root;
+
+    if(find(table_id, &root, key) != NULL){        
         return -1;
     }
-	printf("a");
-    insert(table_id, root, key, value);
+	insert(table_id, root, key, value);
     return 0;
 }
 
@@ -67,9 +65,9 @@ int db_delete(int table_id, int64_t key){
 		return -1;
 	}
    	
-	pagenum_t *root = malloc(sizeof(pagenum_t));
+	pagenum_t root;
 
-  	if(find(table_id, root, key) == NULL){ 
+  	if(find(table_id, &root, key) == NULL){ 
         return -1;
     }
    	delete(table_id, root,key);
@@ -86,10 +84,10 @@ int db_find(int table_id, int64_t key, char *ret_val){
 	}
     
 	record *r;
-    pagenum_t *root = malloc(sizeof(pagenum_t));
+    pagenum_t root;
     
 
-    r = find(table_id, root, key);
+    r = find(table_id, &root, key);
     if(r == NULL){
         return -1;
     }
@@ -100,10 +98,15 @@ int db_find(int table_id, int64_t key, char *ret_val){
 
 }
 
+
 int close_table(int table_id){
+	if(table_id < 1 || table_id >10){
+		return -1;
+	}
 	if(tableList[table_id-1].is_open){
-		if(!buf_close_table(table_id))
+		if(buf_close_table(table_id)){
 			return -1;
+			}
 		else{
 			tableList[table_id-1].is_open = false;
 			return 0;
@@ -115,8 +118,14 @@ int close_table(int table_id){
 int shutdown_db(){
 	int i ;
 	for(i = 0; i< MAX_TABLE_NUM; i++){
-		if(tableList[i].is_open)
-			buf_close_table(i+1);
+		if(tableList[i].is_open){
+			if(buf_close_table(i+1)){
+				return -1;
+			}
+			else{
+				tableList[i].is_open = false;
+			}
+		}
 	}
 	buf_destroy();
 	init = false;

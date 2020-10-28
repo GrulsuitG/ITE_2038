@@ -4,27 +4,18 @@ table tableList[MAX_TABLE_NUM];
 
 pagenum_t file_alloc_page(int table_id){
 	pagenum_t pagenum, num;
-	char* filename = tableList[table_id-1].name;
 	page_t* header=init_page();
+	char* filename = tableList[table_id-1].name;
 	int fd;
 	pagenum_t read_info;
 	file_read_page(table_id, 0,header);
-	
 	if((fd=open(filename, O_RDWR|O_SYNC)) <0){
 	    perror("file open error for alloc");
 		exit(EXIT_FAILURE);
 	}
-
-	/*lseek(fd,PAGE_SIZE*header->freePageNum,SEEK_SET);
-	if(read(fd, &read_info, sizeof(pagenum_t)) < 0){
-        perror("file read error for alloc");
-        exit(EXIT_FAILURE);
-    }*/
-
 	if(header->freePageNum == 0){
 	
 		pagenum = header->numOfPage;
-		lseek(fd,0,SEEK_END);
 		
         // file size up
 		if(truncate(filename,PAGE_SIZE*(header->numOfPage+DEFAULT_FREE_PAGE))<0){
@@ -70,12 +61,12 @@ pagenum_t file_alloc_page(int table_id){
     else{
         lseek(fd, header->freePageNum*PAGE_SIZE, SEEK_SET);
         if(read(fd, &read_info, sizeof(pagenum_t)) < 0){
-            perror("file write error 5 for alloc");
+            perror("file write error 4 for alloc");
             exit(EXIT_FAILURE);
         }
         lseek(fd,0, SEEK_SET);
         if(write(fd, &read_info,sizeof(pagenum_t)) <0){
-            perror("file write error 4 for alloc");
+            perror("file write error 5 for alloc");
             exit(EXIT_FAILURE);
         }
     }
@@ -89,9 +80,8 @@ pagenum_t file_alloc_page(int table_id){
 
 void file_free_page(int table_id, pagenum_t pagenum){
 	int fd;
-	char* filename = tableList[table_id-1].name;
     pagenum_t read_info;
-	
+	char* filename = tableList[table_id-1].name;
 	if((fd = open(filename, O_RDWR)) < 0){
         perror("file open error for free");
         exit(EXIT_FAILURE);
@@ -127,9 +117,8 @@ void file_free_page(int table_id, pagenum_t pagenum){
 }
 
 void file_read_page(int table_id, pagenum_t pagenum, page_t* dest){
-	char* filename = tableList[table_id-1].name;	
-	
 	int fd;
+	char* filename = tableList[table_id-1].name;
 	
 	if((fd = open(filename, O_RDONLY)) < 0){
 		perror("file open error for read");
@@ -190,7 +179,7 @@ void file_read_page(int table_id, pagenum_t pagenum, page_t* dest){
 		if(dest->is_leaf == 1){
 			
 			for(int i=0; i<dest->num_keys; i++){
-				if(read(fd, &dest->key[i], sizeof(int64_t)) < 0){
+				if(read(fd, &dest->keys[i], sizeof(int64_t)) < 0){
                     perror("file read error 8 for read");
                     exit(EXIT_FAILURE);
                  }
@@ -206,7 +195,7 @@ void file_read_page(int table_id, pagenum_t pagenum, page_t* dest){
 
 		else{
 			for(int i=0; i<dest->num_keys; i++){
-				if(read(fd, &dest->key[i], sizeof(int64_t)) < 0){
+				if(read(fd, &dest->keys[i], sizeof(int64_t)) < 0){
                     perror("file read error 10 for read");
                     exit(EXIT_FAILURE);
                 }
@@ -226,15 +215,13 @@ void file_read_page(int table_id, pagenum_t pagenum, page_t* dest){
 
 
 void file_write_page(int table_id, pagenum_t pagenum, const page_t* src){
-	char* filename = tableList[table_id-1].name;
-	
 	int fd;
-	
+	char* filename = tableList[table_id-1].name;
+
 	if((fd=open(filename, O_WRONLY)) < 0){
 		perror("file open error for write");
 		exit(EXIT_FAILURE);
 	}
-	
 	//if the pagenum is 0, that is headpage
 	if(pagenum ==0){
 		
@@ -242,17 +229,14 @@ void file_write_page(int table_id, pagenum_t pagenum, const page_t* src){
 		    perror("file write error 1 for write");
             exit(EXIT_FAILURE);
         }
-		fsync(fd);
 		if(write(fd, &src->rootPageNum, sizeof(pagenum_t)) < 0){
             perror("file write error 2 for write");
             exit(EXIT_FAILURE);
         }
-		fsync(fd);
 		if(write(fd, &src->numOfPage, sizeof(pagenum_t)) < 0){
             perror("file write error 3 for write");
             exit(EXIT_FAILURE);
         }
-		fsync(fd);
 	}
 	//move the pagenum and write page header
 	else{
@@ -261,40 +245,34 @@ void file_write_page(int table_id, pagenum_t pagenum, const page_t* src){
             perror("file write error 4 for write");
             exit(EXIT_FAILURE);
         }
-		fsync(fd);
         if(write(fd, &src->is_leaf, sizeof(int)) < 0){
             perror("file write error 5 for write");
             exit(EXIT_FAILURE);
         }
-		fsync(fd);
 		if(write(fd,&src->num_keys, sizeof(int)) < 0){
             perror("file write error 6 for write");
             exit(EXIT_FAILURE);
         }
-		fsync(fd);
         lseek(fd, PAGE_SIZE*pagenum + 120, SEEK_SET);
 		if(write(fd, &src->pointer, sizeof(pagenum_t)) < 0){
             perror("file write error 7 for write");
             exit(EXIT_FAILURE);
         }
-		fsync(fd);
         if(src->is_leaf == 1){	
 			for(int i=0; i<src->num_keys; i++){
-			    if(write(fd, &src->key[i],sizeof(int64_t)) < 0){
+			    if(write(fd, &src->keys[i],sizeof(int64_t)) < 0){
                    perror("file write error 8 for write");
                    exit(EXIT_FAILURE);
                 }
-			fsync(fd);
-				if(write(fd, src->record[i]->value,sizeof(char)*VALUE_SIZE) < 0){
+				if(write(fd, src->record[i]->value,VALUE_SIZE) < 0){
                     perror("file write error 9 for write");
                     exit(EXIT_FAILURE);
                 }
-			fsync(fd);
 		    }
         }
 		else{
 			for(int i=0; i<src->num_keys; i++){
-				if(write(fd, &src->key[i], sizeof(int64_t)) <0){
+				if(write(fd, &src->keys[i], sizeof(int64_t)) <0){
 			        perror("file write error 10 for write");
                     exit(EXIT_FAILURE);
                 }
@@ -340,9 +318,8 @@ void file_write_root(int table_id, pagenum_t pagenum){
 void make_file(char* filename){
 	int fd, isExist;
     pagenum_t pagenum, num;
-	
 	isExist = access(filename, 00);
-	
+
 	/*if there is not a file
 	  make a file & initailize the file
 	  make a head page and default free page*/
@@ -400,10 +377,9 @@ void make_file(char* filename){
 }
 
 int* get_freelist(int table_id){
-	char* filename = tableList[table_id-1].name;
-	
 	page_t *header=init_page();
 	pagenum_t pagenum;
+	char* filename = tableList[table_id-1].name;
 	int fd;
 	int *list;
 	
@@ -436,14 +412,14 @@ page_t* init_page(){
         exit(EXIT_FAILURE);
     }
     
-	page->key = malloc((INTERNAL_ORDER-1) * sizeof(page_t));
-    if(page->key == NULL){
-    	perror("page key creation for init.");
+	page->keys = malloc((INTERNAL_ORDER-1) * sizeof(int64_t));
+    if(page->keys == NULL){
+    	perror("page keys creation for init.");
 		exit(EXIT_FAILURE);
 	}
-	memset(page->key, 0, sizeof(page->key));
+	memset(page->keys, 0, sizeof(page->keys));
 	
-	page->record = (record**)malloc(sizeof(record*) *(LEAF_ORDER-1));
+	page->record = (record**)malloc(sizeof(record*) * (LEAF_ORDER-1));
 	if(page->record == NULL){
 		perror("page record creation for init");
 		exit(EXIT_FAILURE);
@@ -458,27 +434,14 @@ page_t* init_page(){
 	}
 
 	for(i= 0 ; i<LEAF_ORDER-1; i++){
-		page->record[i]->value = (char*)malloc(sizeof(char) * VALUE_SIZE);
+		page->record[i]->value = (char*)malloc(VALUE_SIZE);
 	    if(page->record[i]->value == NULL){
             perror("page record creation for init.");
             exit(EXIT_FAILURE);
         }
         memset(page->record[i]->value, 0, sizeof(page->record[i]->value));
     }	
-	/*page->record = (char**) malloc(sizeof(char*) * (LEAF_ORDER-1));
-	if(page->record == NULL){
-		perror("page record creation for init");
-		exit(EXIT_FAILURE);
-	}
-	for(i= 0 ; i<LEAF_ORDER-1; i++){
-		page->record[i] = (char*)malloc(sizeof(char) * VALUE_SIZE);
-	    if(page->record[i] == NULL){
-            perror("page record creation for init.");
-            exit(EXIT_FAILURE);
-        }
-        memset(page->record[i], 0, sizeof(page->record[i]));
-    }*/
-	 
+	
 	page->pagenum = malloc(sizeof(pagenum_t) * (INTERNAL_ORDER -1));
     if(page->pagenum == NULL){
     	perror("page info creation for init.");
@@ -490,15 +453,14 @@ page_t* init_page(){
 
 void free_page(page_t *page){
 	int i;
-	if(page->record){
-		for(i=0; i<LEAF_ORDER-1; i++){
-				free(page->record[i]->value);
-		}
+	for(i=0; i<LEAF_ORDER-1; i++){
+		free(page->record[i]);
 	}
+	
 	free(page->record);
 	
 	free(page->pagenum);
-	free(page->key);
+	free(page->keys);
 	free(page);
 
     return ;

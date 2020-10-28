@@ -25,9 +25,6 @@
 #define O_DIRECT 00040000
 #endif
 
-
-
-
 typedef uint64_t pagenum_t;
 
 #ifndef __RECORD__
@@ -41,15 +38,14 @@ typedef struct page_t{
 	pagenum_t rootPageNum;
 	pagenum_t numOfPage;
 
-	pagenum_t nextFreePageNum;
-
 	pagenum_t parentPageNum;
 	int is_leaf;
 	int num_keys;
 	pagenum_t pointer;
 	
+	int64_t *keys;
 	record **record;
-	int64_t *key;
+	
 	pagenum_t *pagenum;
 
 	pagenum_t mypage;
@@ -63,12 +59,13 @@ typedef struct table{
 
 extern table tableList[MAX_TABLE_NUM];
 
-pagenum_t file_alloc_page(int table_id);
+pagenum_t file_alloc_page(int table_id );
 void file_free_page(int table_id, pagenum_t pagenum);
 void file_read_page(int table_id, pagenum_t pagenum, page_t* dest);
 void file_write_page(int table_id, pagenum_t pagenum, const page_t* src);
 void file_write_root(int table_id, pagenum_t pagenum);
-void make_file(char* filename);
+
+void make_file(char* filname);
 int* get_freelist(int table_id);
 page_t* init_page();
 

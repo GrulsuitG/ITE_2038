@@ -7,9 +7,6 @@
 
 bool init;
 
-//extern table tableList[MAX_TABLE_NUM];
-
-
 int init_db(int num_buf);
 int open_table(char *pathname);
 int db_insert(int table_id, int64_t key, char *value);
