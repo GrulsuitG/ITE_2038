@@ -338,9 +338,6 @@ node* syncFileAndTree(int table_id){
             } 
         }
     }
-  	free_page(header);
-  	free_page(parentpage);
-  	free_page(childpage);
     return root;
 }
 
@@ -1003,7 +1000,7 @@ pagenum_t start_new_tree(int table_id, int64_t key, record * pointer) {
 int get_neighbor_index(int table_id, page_t *p ) {
 
     int i;
-	page_t *parent = init_page();
+	page_t *parent;
 
     /* Return the index of the key to the left
      * of the pointer in the parent pointing
@@ -1011,12 +1008,17 @@ int get_neighbor_index(int table_id, page_t *p ) {
      * If n is the leftmost child, this means
      * return -1.
      */
-	file_read_page(table_id, p->parentPageNum, parent);
-	if(parent->pointer == p->mypage)
+	parent = buf_read_page(table_id, p->parentPageNum);
+	if(parent->pointer == p->mypage){
+		buf_return_page(table_id, parent->mypage, false);
 		return -1;
-    for (i = 0; i < parent->num_keys; i++)
-        if (parent->pagenum[i] == p->mypage)
-            return i;
+	}
+    for (i = 0; i < parent->num_keys; i++){
+        if (parent->pagenum[i] == p->mypage){
+			buf_return_page(table_id, parent->mypage, false);
+        	return i;
+		}
+	}
 }
 
 
@@ -1071,26 +1073,23 @@ page_t* remove_entry_from_page(page_t *p, int64_t key, pagenum_t pagenum) {
     p->num_keys--;
     // Set the other pointers to NULL for tidiness.
     // A leaf uses the last pointer to point to the next leaf.
-/*    if (p->is_leaf)
-        for (i = p->num_keys; i < (LEAF_ORDER - 1); i++)
-            p->record[i] = NULL;
-*/	
 	return p;
 }
 
 
-pagenum_t adjust_root(int table_id, pagenum_t root) {
+pagenum_t adjust_root(int table_id, page_t *root) {
 
     int i;
-	page_t *new_root, *page;
-	page= init_page();
-	file_read_page(table_id, root, page);
+	page_t *new_root;
+//	page = buf_read_page(table_id, root);
     /* Case: nonempty root.
      * Key and pointer have already been deleted,
      * so nothing to be done.
      */
-    if (page->num_keys > 0){
-		return page->mypage;
+    if (root->num_keys > 0){
+		buf_return_page(table_id, root->mypage, true);
+
+		return root->mypage;
 	}
     /* Case: empty root. 
      */
@@ -1098,22 +1097,22 @@ pagenum_t adjust_root(int table_id, pagenum_t root) {
     // If it has a child, promote 
     // the first (only) child
     // as the new root.
-    if (!page->is_leaf) {
-		new_root = init_page();
-		file_read_page(table_id, page->pointer, new_root);
+    if (!root->is_leaf) {
+		new_root = buf_read_page(table_id, root->pointer);
         new_root->parentPageNum = 0;
 
-		file_free_page(table_id, page->mypage);
-		file_write_page(table_id, new_root->mypage, new_root);
+		buf_free_page(table_id, root->mypage);
+		buf_return_page(table_id, new_root->mypage, true);
 		return new_root->mypage;
     }
 
     // If it is a leaf (has no children),
     // then the whole tree is empty.
 
-    else
-        return 0;
-	
+    else{
+     	buf_free_page(table_id, root->mypage);
+	 	return 0;
+	}
 }
 
 
@@ -1126,24 +1125,10 @@ pagenum_t adjust_root(int table_id, pagenum_t root) {
 pagenum_t coalesce_nodes(int table_id, pagenum_t root, page_t *p, page_t* parent, page_t *neighbor, int neighbor_index, int64_t k_prime) {
 
     int i, j, neighbor_insertion_index, n_end;
-	page_t *child = init_page();
-    /* Swap neighbor with node if node is on the
-     * extreme left and neighbor is to its right.
-     */
-  /*  if (neighbor_index == -1) {
-		//pagenum = neighbor->pagenum;
-		//neighbor->pagenum = n->pagenum;
-		//n->pagenum = pagenum;
-        tmp = p;
-        p = neighbor;
-        neighbor = tmp;
-		//pagenum = neighbor->pagenum;
-		//neighbor->pagenum = n->pagenum;
-		//n->pagenum = pagenum;
-		
-    }
-*/
-    /* Starting point in the neighbor for copying
+	pagenum_t pagenum;
+	page_t *child;
+    
+	/* Starting point in the neighbor for copying
      * keys and pointers from n.
      * Recall that n and neighbor have swapped places
      * in the special case of n being a leftmost child.
@@ -1165,15 +1150,15 @@ pagenum_t coalesce_nodes(int table_id, pagenum_t root, page_t *p, page_t* parent
 		neighbor->pagenum[neighbor_insertion_index] = p->pointer;
 	}
 	neighbor->num_keys++;
-	printf("pointer : %ld\n", p->pointer);
-	file_read_page(table_id, p->pointer, child);
+	child = buf_read_page(table_id, p->pointer);
 	child->parentPageNum = neighbor->mypage;
-	file_write_page(table_id, child->mypage, child);
+	buf_return_page(table_id, child->mypage, true);
 	
-	file_write_page(table_id, neighbor->mypage, neighbor);
-	file_free_page(table_id, p->mypage);
+	buf_return_page(table_id, neighbor->mypage, true);
+	pagenum = p->mypage;
+	buf_free_page(table_id, p->mypage);
 	
-	return delete_entry(table_id, root, parent, k_prime, p->mypage);
+	return delete_entry(table_id, root, parent, k_prime, pagenum);
 }
 	
 
@@ -1187,7 +1172,7 @@ pagenum_t redistribute_nodes(int table_id, pagenum_t root, page_t *p, page_t* pa
         int k_prime_index, int64_t k_prime) {  
 
     int i;
-    page_t* tmp= init_page();
+    page_t* tmp;
 
     /* Case: n has a neighbor to the left. 
      * Pull the neighbor's last key-pointer pair over
@@ -1202,7 +1187,7 @@ pagenum_t redistribute_nodes(int table_id, pagenum_t root, page_t *p, page_t* pa
 		p->pagenum[0] = p->pointer;
 
 		p->pointer = neighbor->pagenum[neighbor->num_keys-1];
-		file_read_page(table_id, p->pointer, tmp);
+		tmp = buf_read_page(table_id, p->pointer);
 		tmp->parentPageNum= p->mypage;
 
 		p->keys[0] = k_prime;
@@ -1218,7 +1203,7 @@ pagenum_t redistribute_nodes(int table_id, pagenum_t root, page_t *p, page_t* pa
     else {  
         p->keys[p->num_keys] = k_prime;
         p->pagenum[p->num_keys] = neighbor->pointer;
-        file_read_page(table_id, neighbor->pointer, tmp);
+        tmp = buf_read_page(table_id, neighbor->pointer);
         tmp->parentPageNum = p->mypage;
         parent->keys[k_prime_index] = neighbor->keys[0];
         
@@ -1235,10 +1220,10 @@ pagenum_t redistribute_nodes(int table_id, pagenum_t root, page_t *p, page_t* pa
     p->num_keys++;
     neighbor->num_keys--;
 
-	file_write_page(table_id, p->mypage, p);
-	file_write_page(table_id, neighbor->mypage, neighbor);
-	file_write_page(table_id, tmp->mypage, tmp);
-	file_write_page(table_id, parent->mypage, parent);
+	buf_return_page(table_id, p->mypage,true);
+	buf_return_page(table_id, neighbor->mypage, true);
+	buf_return_page(table_id, tmp->mypage, true);
+	buf_return_page(table_id, parent->mypage, true);
 
     return root;
 }
@@ -1252,17 +1237,20 @@ pagenum_t redistribute_nodes(int table_id, pagenum_t root, page_t *p, page_t* pa
 pagenum_t delete_entry(int table_id,  pagenum_t root, page_t *p, int64_t key, pagenum_t pagenum) {
 
     page_t *neighbor, *parent;
-	pagenum_t root_page;
+	pagenum_t num;
     int neighbor_index;
     int k_prime_index;
 	int64_t k_prime;
-    // Remove key and pointer from node.
+//	printf("cur page :%ld, %d\n", p->mypage, p->num_keys);
+//	print_buf();
+//	printf("root : %ld\n", root);
     p = remove_entry_from_page(p, key, pagenum);
     /* Case:  deletion from the root. 
      */
 	if(p->mypage ==root){
-		file_write_page(table_id, p->mypage,p);
-		return adjust_root(table_id, root);
+	//	buf_return_page(table_id, p->mypage,true);
+//		printf("a");
+		return adjust_root(table_id, p);
 	}
     /* Case:  deletion from a node below the root.
      * (Rest of function body.)
@@ -1278,7 +1266,8 @@ pagenum_t delete_entry(int table_id,  pagenum_t root, page_t *p, int64_t key, pa
      */
 
     if (p->num_keys > 0){
-    	file_write_page(table_id, p->mypage, p);
+//		printf("b");
+    	buf_return_page(table_id, p->mypage, true);
 		return root;
 	}
 
@@ -1293,36 +1282,41 @@ pagenum_t delete_entry(int table_id,  pagenum_t root, page_t *p, int64_t key, pa
      * between the pointer to node n and the pointer
      * to the neighbor.
      */
-
+//	printf("c");
     neighbor_index = get_neighbor_index(table_id, p );
     k_prime_index = neighbor_index == -1 ? 0 : neighbor_index;
-    parent = init_page();
-	file_read_page(table_id, p->parentPageNum, parent);
+	parent = buf_read_page(table_id, p->parentPageNum);
 	k_prime = parent->keys[k_prime_index];
-	neighbor = init_page();
     if(neighbor_index == -1)
-		file_read_page(table_id, parent->pagenum[0], neighbor);
+		neighbor = buf_read_page(table_id, parent->pagenum[0]);
 	else if(neighbor_index== 0)
-		file_read_page(table_id, parent->pointer, neighbor);
+		neighbor = buf_read_page(table_id, parent->pointer);
 	else
-    	file_read_page(table_id, parent->pagenum[neighbor_index], neighbor);
+    	neighbor = buf_read_page(table_id, parent->pagenum[neighbor_index]);
 
 	if(p->is_leaf){
 		if(neighbor_index != -1){
 			neighbor->pointer = p->pointer;
-			file_write_page(table_id, neighbor->mypage, neighbor);
+			buf_return_page(table_id, neighbor->mypage, true);
 		}
-		file_free_page(table_id, p->mypage);
-		return delete_entry(table_id, root, parent,k_prime, p->mypage);
+		else
+			buf_return_page(table_id, neighbor->mypage, false);
+			
+		num = p->mypage;
+		buf_free_page(table_id, p->mypage);
+//		printf("d");
+		return delete_entry(table_id, root, parent,k_prime, num);
 	}
 	/* Coalescence. */
 	if(neighbor->num_keys != INTERNAL_ORDER-1){
-		
+//		printf("d");
     	return coalesce_nodes(table_id, root, p, parent,neighbor, neighbor_index, k_prime);
 	}
     /* Redistribution. */
-	else
-    	return redistribute_nodes(table_id, root, p, parent, neighbor, neighbor_index, k_prime_index, k_prime);
+	else{
+  //  	printf("e");
+		return redistribute_nodes(table_id, root, p, parent, neighbor, neighbor_index, k_prime_index, k_prime);
+	}
 }
 
 
@@ -1334,20 +1328,16 @@ void delete(int table_id, pagenum_t root, int64_t key) {
     pagenum_t root_page;
 	page_t *key_leaf;
 	page_t *header;
-    record * key_record;
 
-    key_record = find(table_id, &root, key);
     key_leaf = find_leaf(table_id, root, key);
 
-    if (key_record != NULL && key_leaf != NULL) {
+    if (key_leaf != NULL) {
         root_page = delete_entry(table_id, root, key_leaf, key, 0);
-		free(key_record->value);
-		free(key_record);
 		if(root_page != root){
-			header = init_page();
-			file_read_page(table_id, 0, header);
+			//printf("root_page : %ld\n", root_page);
+			header =buf_read_page(table_id, 0);
 			header->rootPageNum = root_page;
-			file_write_page(table_id, 0, header);
+			buf_return_page(table_id, 0, true);
 		}
     }
 }

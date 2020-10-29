@@ -24,7 +24,7 @@ int make_buf(int size){
 	}
 	for(i=0; i<size; i++){
 		block[i]->frame = init_page();
-		
+		block[i]->id = i;
 		block[i]->next = block[(i+1)%size];
 		block[(i+1)%size]->prev = block[i];
 	}
@@ -36,7 +36,7 @@ page_t* buf_read_page(int table_id, pagenum_t pagenum){
 
 	if(index == -1){
 		index = find_empty(table_id, pagenum);
-		buf_clear(index);
+	//	buf_clear(index);
 		file_read_page(table_id, pagenum, block[index]->frame);
 		}
 
@@ -69,7 +69,7 @@ void buf_return_page(int table_id, pagenum_t pagenum,  bool is_dirty){
 page_t* buf_alloc_page(int table_id){
 	pagenum_t pagenum = file_alloc_page(table_id);
 	int index = find_empty(table_id, pagenum);
-	buf_clear(index);
+//	buf_clear(index);
 	
 	block[index]->frame->mypage =pagenum;
 
@@ -84,10 +84,11 @@ page_t* buf_alloc_page(int table_id){
 }
 void buf_free_page(int table_id, pagenum_t pagenum){
 	int index = find_place(table_id, pagenum);
-
+	
+	block[index]->pin_count--;
 	file_free_page(table_id, pagenum);
 
-	block[index]->table_id = 0;
+//	buf_clear(index);
 }
 
 void enList(int index){
@@ -156,10 +157,11 @@ int eviction(){
 				page = (page_t*)tail->frame;
 				if(tail->pagenum ==0){
 					file_write_root(tail->table_id, page->rootPageNum);
+					buf_clear(tail->id);
 				}
 				else{
 					file_write_page(tail->table_id, tail->pagenum, page);
-					
+					buf_clear(tail->id);
 				}
 			}
 			head = tail;
@@ -209,19 +211,16 @@ void buf_clear(int index){
 	block[index]->ref_bit = false;
 	block[index]->is_dirty = false;
 	block[index]->pin_count = 0;
-	block[index]->frame -> is_leaf = 0;
-	block[index]->frame -> num_keys = 0;
-	block[index]->frame -> parentPageNum = 0;
-	block[index]->frame ->pointer = 0;
-	block[index]->frame ->rootPageNum =0;
-	block[index]->frame ->freePageNum =0;
-	block[index]->frame ->numOfPage = 0;
+	free_page(block[index]->frame);
+	block[index]->frame = NULL;
+	block[index]->frame = init_page();
 }
 
 void buf_destroy(){
 	int i ;
 	for(i =0; i< buf_size; i++){
-		free_page(block[i]->frame);
+		if(block[i]->frame)
+			free_page(block[i]->frame);
 		free(block[i]);
 	}
 	free(block);
@@ -231,14 +230,14 @@ void print_buf(){
 	int i,j;
 	
 	for(i=0; i<buf_size; i++){
-		printf("[%d] : %d, %ld, %d, %d, %d\n", i, block[i]->table_id, block[i]->pagenum, block[i]->is_dirty, block[i]->ref_bit, block[i]->pin_count);
-	/*	if(block[i]->pagenum !=0){
-			printf("key : ");
-			for(j=0; j<buf_pool[i]->num_keys; j++){
-				printf("%ld ", buf_pool[i]->keys[j]);
-			}
-			printf("\n");
-		}*/
+	printf("[%d] : %d, %ld, %d, %d, %d\n", i, block[i]->table_id, block[i]->pagenum, block[i]->is_dirty, block[i]->ref_bit, block[i]->pin_count);
+	//	if(block[i]->pagenum ==3){
+	//		printf("key : %ld", block[i]->frame->rootPageNum);
+//			for(j=0; j<buf_pool[i]->num_keys; j++){
+//				printf("%ld ", buf_pool[i]->keys[j]);
+//			}
+//			printf("\n");
+	//	}
 	}
 	printf("========================");
 }

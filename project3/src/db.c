@@ -4,6 +4,8 @@ int unique_id = 1;
 
 int init_db(int num_buf){
 	int i;
+	if(init)
+		return -1;
 	if(make_buf(num_buf))
 		return -1;
 	for(i =0; i< MAX_TABLE_NUM; i++)

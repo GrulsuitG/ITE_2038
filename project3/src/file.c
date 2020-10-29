@@ -454,7 +454,8 @@ page_t* init_page(){
 void free_page(page_t *page){
 	int i;
 	for(i=0; i<LEAF_ORDER-1; i++){
-		free(page->record[i]);
+			//free(page->record[i]->value);
+			//free(page->record[i]);
 	}
 	
 	free(page->record);
