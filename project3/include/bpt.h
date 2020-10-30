@@ -141,7 +141,7 @@ void insert(int table_id, pagenum_t root, int64_t key, char *value );
 // Deletion.
 
 int get_neighbor_index(int table_id,  page_t *p );
-pagenum_t adjust_root(int table_id, pagenum_t root);
+pagenum_t adjust_root(int table_id, page_t *root);
 pagenum_t coalesce_nodes(int table_id, pagenum_t root, page_t *p, page_t *parent, page_t *neighbor, int neighbor_index, int64_t k_prime);
 pagenum_t redistribute_nodes(int table_id, pagenum_t root, page_t *p, page_t *parent ,page_t *neighbor,
          int neighbor_index,int k_prime_index, int64_t k_prime);

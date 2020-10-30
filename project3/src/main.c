@@ -25,7 +25,7 @@ int main(){
 	//printf("%d",open_table("db"));
 	//printf("%d",open_table("gg"));
 	init_db(10);
-//	open_table("a");
+	open_table("a");
 	open_table("b");
 	open_table("c");
 	open_table("d");
@@ -49,10 +49,10 @@ int main(){
 	//open_table("dd");*/
 for( i = 0; i< 10000; i++){
 //		num = rand()%11000;
-		id = rand()%3+1;
+		//id = rand()%3+1;
 		get_random_str(c);	
 		//printf("%d %s\n", num, c);
-		db_insert(id,i ,c);	
+		db_insert(1,i ,"value");	
 	//	print_buf();
 	//	printf("%d\n", i);
 	}
@@ -89,11 +89,11 @@ for(i = 1; i <=50; i++){
 //print_tree();
 for( i = 0; i< 10000; i++){
 //		num = rand()% 11000;	
-		id = rand()%3+1;
+	//	id = rand()%3+1;
 //		get_random_str(c);
 //		//printf("delete :%d\n", num);	
 	//	printf("\ndelete : %d\n",i);
-		db_delete(id ,i);
+	//	db_delete(id ,i);
 //		print_buf();
 //		printf("%d\n",i);
 	}// print_buf();
