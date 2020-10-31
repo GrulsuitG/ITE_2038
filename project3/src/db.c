@@ -4,6 +4,8 @@ int unique_id = 1;
 
 int init_db(int num_buf){
 	int i;
+	if(num_buf <1)
+		return -1;
 	if(init)
 		return -1;
 	if(make_buf(num_buf))

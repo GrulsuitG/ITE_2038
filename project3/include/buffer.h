@@ -9,6 +9,7 @@
 typedef struct buf_ctrl_block{
 	page_t *frame;
 	
+	int id;
 	int table_id;
 	pagenum_t pagenum;
 	bool is_dirty;

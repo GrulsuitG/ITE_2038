@@ -69,8 +69,7 @@ void buf_return_page(int table_id, pagenum_t pagenum,  bool is_dirty){
 page_t* buf_alloc_page(int table_id){
 	pagenum_t pagenum = file_alloc_page(table_id);
 	int index = find_empty(table_id, pagenum);
-//	buf_clear(index);
-	
+	buf_clear(index);
 	block[index]->frame->mypage =pagenum;
 
 	block[index]->pagenum = pagenum;
@@ -87,8 +86,9 @@ void buf_free_page(int table_id, pagenum_t pagenum){
 	
 	block[index]->pin_count--;
 	file_free_page(table_id, pagenum);
+	block[index] -> table_id = 0;
 
-//	buf_clear(index);
+	
 }
 
 void enList(int index){
@@ -239,5 +239,5 @@ void print_buf(){
 //			printf("\n");
 	//	}
 	}
-	printf("========================");
+	printf("========================\n");
 }

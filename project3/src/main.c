@@ -93,7 +93,7 @@ for( i = 0; i< 10000; i++){
 //		get_random_str(c);
 //		//printf("delete :%d\n", num);	
 	//	printf("\ndelete : %d\n",i);
-	//	db_delete(id ,i);
+		db_delete(1 ,i);
 //		print_buf();
 //		printf("%d\n",i);
 	}// print_buf();
