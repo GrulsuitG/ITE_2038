@@ -20,7 +20,7 @@ typedef struct buf_ctrl_block{
 	struct buf_ctrl_block *prev;
 }buf_ctrl_block;
 
-//page_t **buf_pool;
+
 buf_ctrl_block **block;
 int buf_size;
 
@@ -33,8 +33,6 @@ page_t* buf_read_page(int table_id, pagenum_t pagenum);
 void buf_return_page(int table_id, pagenum_t pagenum,bool is_dirty);
 page_t* buf_alloc_page(int table_id);
 void buf_free_page(int table_id, pagenum_t pagenum);
-
-void enList(int index);
 
 int find_empty(int table_id, pagenum_t pagenum);
 int find_place(int iable_id, pagenum_t pagenum);

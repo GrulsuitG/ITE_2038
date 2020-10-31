@@ -91,26 +91,6 @@ void buf_free_page(int table_id, pagenum_t pagenum){
 	
 }
 
-void enList(int index){
-	if(!head){
-		head = block[index];
-		tail = block[index];
-		head->next = tail;
-		head->prev = tail;
-		tail->next = head;
-		tail->prev = head;
-	}
-	else {
-		if(block[index]->next){
-			block[index]->next->prev = block[index]->prev;
-			block[index]->prev->next = block[index]->next;
-		}
-		head->next = block[index];
-		block[index]->next =tail;
-		block[index]->prev = head;
-		head = block[index];
-	}
-}
 
 int find_empty(int table_id, pagenum_t pagenum){
 	int num = (table_id+pagenum)%buf_size;
@@ -157,13 +137,12 @@ int eviction(){
 				page = (page_t*)tail->frame;
 				if(tail->pagenum ==0){
 					file_write_root(tail->table_id, page->rootPageNum);
-					buf_clear(tail->id);
 				}
 				else{
 					file_write_page(tail->table_id, tail->pagenum, page);
-					buf_clear(tail->id);
 				}
 			}
+			buf_clear(tail->id);
 			head = tail;
 			return find_place(tail->table_id, tail->pagenum);
 		}
@@ -200,6 +179,7 @@ int buf_close_table(int table_id){
 					file_write_page(block[i]->table_id,block[i]->pagenum, page);
 				}
 			}
+			block[i]-> table_id = 0;
 		}
 	}
 	return 0;
