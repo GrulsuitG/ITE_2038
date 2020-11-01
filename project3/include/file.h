@@ -51,11 +51,7 @@ typedef struct page_t{
 	pagenum_t mypage;
 }page_t;
 
-typedef struct table{
-	char* name;
-	bool is_open;
-	int fd;
-}table;
+
 
 int fdList[MAX_TABLE_NUM];
 

@@ -51,19 +51,40 @@ int main(){
 	//db_insert(11111, "asdasd");
 	//print_tree(root);
 	//open_table("dd");*/
-for( i = 0; i< 10000; i++){
+for( i = 0; i< 2500; i++){
 		//num = rand()%10000;
-		id = rand()%4+1;
-		get_random_str(c);	
+		//id = rand()%4+1;
+		//get_random_str(c);	
 		//printf("%d %s\n", num, c);
 		db_insert(1,i ,"value");	
 	//	print_buf();
 	//	printf("%d\n", i);
 	}
-close_table(1);
-num = open_table("a");
-	printf("%d,%d\n",num,fdList[num-1]);
-print_tree(1);
+for( i = 2500; i< 5000; i++){
+		//num = rand()%10000;
+		//id = rand()%4+1;
+		//get_random_str(c);	
+		//printf("%d %s\n", num, c);
+		db_insert(2,i ,"value");	
+	//	print_buf();
+	//	printf("%d\n", i);
+	}for( i = 5000; i< 7500; i++){
+		//num = rand()%10000;
+		id = rand()%4+1;
+		get_random_str(c);	
+		//printf("%d %s\n", num, c);
+		db_insert(3,i ,"value");	
+	//	print_buf();
+	//	printf("%d\n", i);
+	}for( i = 7500; i< 10000; i++){
+		//num = rand()%10000;
+		id = rand()%4+1;
+		get_random_str(c);	
+		//printf("%d %s\n", num, c);
+		db_insert(4,i ,"value");	
+	//	print_buf();
+	//	printf("%d\n", i);
+	}
 //	print_buf();
 /*	for(i =0; i< page->num_keys; i++){
 		r= page->record[i];
@@ -93,7 +114,7 @@ for(i = 1; i <=50; i++){
 
 //printf("=========================================\n");
 //print_tree();
-/*for( i = 0; i< 10000; i++){
+for( i = 0; i< 10000; i++){
 		num = rand()% 10000;	
 		id = rand()%4+1;
 //		get_random_str(c);

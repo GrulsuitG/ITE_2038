@@ -8,6 +8,12 @@
 bool init;
 int unique_id;
 
+typedef struct table{
+	char* name;
+	bool is_open;
+	int fd;
+}table;
+
 table tableList[MAX_TABLE_NUM];
 
 int init_db(int num_buf);
