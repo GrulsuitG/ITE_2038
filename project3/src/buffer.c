@@ -1,6 +1,6 @@
 #include "buffer.h"
 
-int make_buf(int size){
+int buf_init(int size){
 	int i;
 	buf_size = size;
 	/*buf_pool = (page_t**)malloc(sizeof(page_t*)*size);
@@ -29,6 +29,10 @@ int make_buf(int size){
 		block[(i+1)%size]->prev = block[i];
 	}
 	return 0;
+}
+
+int buf_open(int table_id, char* filename){
+	return file_open(table_id, filename);
 }
 
 page_t* buf_read_page(int table_id, pagenum_t pagenum){
@@ -160,7 +164,7 @@ int eviction(){
 	
 }
 
-int buf_close_table(int table_id){
+int buf_close(int table_id){
 	int i ;
 	page_t *page;
 	for(i = 0; i<buf_size; i++){
@@ -182,7 +186,7 @@ int buf_close_table(int table_id){
 			block[i]-> table_id = 0;
 		}
 	}
-	return 0;
+	return file_close(table_id);
 }
 
 void buf_clear(int index){

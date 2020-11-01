@@ -6,6 +6,9 @@
 #define MAX_PATH_LENGTH 20
 
 bool init;
+int unique_id;
+
+table tableList[MAX_TABLE_NUM];
 
 int init_db(int num_buf);
 int open_table(char *pathname);

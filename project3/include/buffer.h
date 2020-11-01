@@ -27,7 +27,9 @@ int buf_size;
 buf_ctrl_block* head;
 buf_ctrl_block* tail;
 
-int make_buf(int size);
+int buf_init(int num_buf);
+
+int buf_open(int table_id, char* filename);
 
 page_t* buf_read_page(int table_id, pagenum_t pagenum);
 void buf_return_page(int table_id, pagenum_t pagenum,bool is_dirty);
@@ -41,7 +43,7 @@ int eviction();
 
 void buf_clear(int index);
 
-int buf_close_table(int table_id);
+int buf_close(int table_id);
 void buf_destroy();
 
 void print_buf();

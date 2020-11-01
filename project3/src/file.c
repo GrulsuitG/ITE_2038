@@ -1,27 +1,26 @@
 #include "file.h"
 
-table tableList[MAX_TABLE_NUM];
 
 pagenum_t file_alloc_page(int table_id){
 	pagenum_t pagenum, num;
 	page_t* header=init_page();
-	char* filename = tableList[table_id-1].name;
-	int fd;
+	//char* filename = tableList[table_id-1].name;
+	int fd = fdList[table_id-1];
 	pagenum_t read_info;
 	file_read_page(table_id, 0,header);
-	if((fd=open(filename, O_RDWR|O_SYNC)) <0){
+	/*if((fd=open(filename, O_RDWR|O_SYNC)) <0){
 	    perror("file open error for alloc");
 		exit(EXIT_FAILURE);
-	}
+	}*/
 	if(header->freePageNum == 0){
 	
 		pagenum = header->numOfPage;
-		
+
         // file size up
-		if(truncate(filename,PAGE_SIZE*(header->numOfPage+DEFAULT_FREE_PAGE))<0){
+		/*if(truncate(filename,PAGE_SIZE*(header->numOfPage+DEFAULT_FREE_PAGE))<0){
             perror("file truncate error for alloc");
             exit(EXIT_FAILURE);
-        }
+        }*/
 		//write next free page num at new pages
 		for(int i =1 ; i<DEFAULT_FREE_PAGE; i++){
 			lseek(fd, PAGE_SIZE*pagenum, SEEK_SET);
@@ -74,18 +73,18 @@ pagenum_t file_alloc_page(int table_id){
         perror("file sync error for alloc");
         exit(EXIT_FAILURE);
     }
-	close(fd);
+	//aaclose(fd);
 	return header->freePageNum;
 }
 
 void file_free_page(int table_id, pagenum_t pagenum){
-	int fd;
+	int fd = fdList[table_id-1];
     pagenum_t read_info;
-	char* filename = tableList[table_id-1].name;
+	/*char* filename = tableList[table_id-1].name;
 	if((fd = open(filename, O_RDWR)) < 0){
         perror("file open error for free");
         exit(EXIT_FAILURE);
-    }
+    }*/
     
 	//find first free page
 	lseek(fd, 0, SEEK_SET);
@@ -112,18 +111,18 @@ void file_free_page(int table_id, pagenum_t pagenum){
         perror("filw sync error for free");
         exit(EXIT_FAILURE);
     }
-    close(fd);
+  //  close(fd);
 	return ;
 }
 
 void file_read_page(int table_id, pagenum_t pagenum, page_t* dest){
-	int fd;
-	char* filename = tableList[table_id-1].name;
+	int fd = fdList[table_id-1];
+	/*char* filename = tableList[table_id-1].name;
 	
 	if((fd = open(filename, O_RDONLY)) < 0){
 		perror("file open error for read");
 		exit(EXIT_FAILURE);
-	}
+	}*/
 	dest->mypage = pagenum;
 // default read the headpage
 	lseek(fd, 0, SEEK_SET);
@@ -146,7 +145,7 @@ void file_read_page(int table_id, pagenum_t pagenum, page_t* dest){
 
 	//if the pagenum is 0, that is headpage
 	if(pagenum ==0){
-		close(fd);
+		//close(fd);
 		return;
 	}
 	//move the pagenum and read page header
@@ -208,20 +207,20 @@ void file_read_page(int table_id, pagenum_t pagenum, page_t* dest){
 		}
 	}
 	
-	close(fd);
+	//close(fd);
 	return;
 }
 
 
 
 void file_write_page(int table_id, pagenum_t pagenum, const page_t* src){
-	int fd;
-	char* filename = tableList[table_id-1].name;
+	int fd = fdList[table_id-1];
+	/*char* filename = tableList[table_id-1].name;
 
 	if((fd=open(filename, O_WRONLY)) < 0){
 		perror("file open error for write");
 		exit(EXIT_FAILURE);
-	}
+	}*/
 	//if the pagenum is 0, that is headpage
 	if(pagenum ==0){
 		
@@ -289,19 +288,18 @@ void file_write_page(int table_id, pagenum_t pagenum, const page_t* src){
         perror("file sync error for wrte");
         exit(EXIT_FAILURE);
     }
-	close(fd);
+	//close(fd);
     return;
 }
 
 void file_write_root(int table_id, pagenum_t pagenum){
-	char* filename = tableList[table_id-1].name;
+	int fd = fdList[table_id-1];
 	
-	int fd;
-	
+	/*char* filename = tableList[table_id-1].name;
 	if((fd=open(filename, O_WRONLY)) < 0){
 		perror("file open error for write root");
 		exit(EXIT_FAILURE);
-	}
+	}*/
 	lseek(fd, sizeof(pagenum_t), SEEK_SET);
 	if(write(fd, &pagenum, sizeof(pagenum_t)) < 0){
 		perror("file write error for write root");
@@ -311,22 +309,14 @@ void file_write_root(int table_id, pagenum_t pagenum){
         perror("file sync error for wrte root");
         exit(EXIT_FAILURE);
     }
-	close(fd);
+	//close(fd);
     return;
 }
 
-void make_file(char* filename){
-	int fd, isExist;
+int make_file(char* filename){
+	int fd;
     pagenum_t pagenum, num;
-	isExist = access(filename, 00);
-
-	/*if there is not a file
-	  make a file & initailize the file
-	  make a head page and default free page*/
-	if (isExist != -1){
-		return;
-	}
-
+	//isExist = access(filename, 00);
 
 	if((fd = open(filename,O_RDWR|O_CREAT,0644)) < 0){
 		perror("make file error");
@@ -372,24 +362,44 @@ void make_file(char* filename){
         perror("file sync error for make");
         exit(EXIT_FAILURE);
     }
-	close(fd);
+	//close(fd);
+	return fd;
+}
 
+int file_open(int table_id, char* filename){
+	int isExist;
+	isExist = access(filename, 00);
+	if (isExist != -1){
+		if((fdList[table_id-1] = open(filename, O_RDWR | O_SYNC)) < 0){
+			perror("file open error for read");
+			exit(EXIT_FAILURE);
+		}
+	}
+	else{
+		fdList[table_id-1] = make_file(filename);
+	}
+	return fdList[table_id-1];
+}
+
+int file_close(int table_id){
+	close(fdList[table_id-1]);
+	return 0;
 }
 
 int* get_freelist(int table_id){
 	page_t *header=init_page();
 	pagenum_t pagenum;
-	char* filename = tableList[table_id-1].name;
-	int fd;
+	//char* filename = tableList[table_id-1].name;
+	int fd = fdList[table_id-1];
 	int *list;
 	
 	file_read_page(table_id, 0, header);
 	list = malloc(sizeof(int) * header->numOfPage);
 	
-	if((fd = open(filename, O_RDONLY)) <0){
+	/*if((fd = open(filename, O_RDONLY)) <0){
 		perror("file open error for get freelist");
 		exit(EXIT_FAILURE);
-	}
+	}*/
 	pagenum = header->freePageNum;
 	while(pagenum != 0){
 		list[pagenum] = 1;
@@ -452,12 +462,6 @@ page_t* init_page(){
 }
 
 void free_page(page_t *page){
-	int i;
-	for(i=0; i<LEAF_ORDER-1; i++){
-		//free(page->record[i]);
-		//free(page->record[i]->value);
-			
-	}
 	
 	free(page->record);
 	

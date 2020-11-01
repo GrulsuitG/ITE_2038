@@ -121,6 +121,11 @@ page_t * find_leaf(int table_id, pagenum_t root, int64_t key);
 record* find(int table_id, pagenum_t *root, int64_t key);
 int cut( int length );
 
+int index_init(int num_buf);
+
+int index_open(int table_id, char* filename);
+int index_close(int table_id);
+
 // Insertion.
 
 record * make_record(char *value);

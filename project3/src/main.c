@@ -25,10 +25,14 @@ int main(){
 	//printf("%d",open_table("db"));
 	//printf("%d",open_table("gg"));
 	init_db(10);
-	open_table("a");
-	open_table("b");
-	open_table("c");
-	open_table("d");
+	num = open_table("a");
+	printf("%d,%d\n",num,fdList[num-1]);
+	num = open_table("b");
+	printf("%d,%d\n",num,fdList[num-1]);
+	num = open_table("c");
+	printf("%d,%d\n",num,fdList[num-1]);
+	num = open_table("a");
+	printf("%d,%d\n",num,fdList[num-1]);
 //	print_tree(1);
 //	print_buf();
 	//printf("%d",open_table("db"));i*/
@@ -48,16 +52,18 @@ int main(){
 	//print_tree(root);
 	//open_table("dd");*/
 for( i = 0; i< 10000; i++){
-//		num = rand()%11000;
-		//id = rand()%3+1;
+		//num = rand()%10000;
+		id = rand()%4+1;
 		get_random_str(c);	
 		//printf("%d %s\n", num, c);
 		db_insert(1,i ,"value");	
 	//	print_buf();
 	//	printf("%d\n", i);
 	}
-//close_table(1);
-//print_tree(1);
+close_table(1);
+num = open_table("a");
+	printf("%d,%d\n",num,fdList[num-1]);
+print_tree(1);
 //	print_buf();
 /*	for(i =0; i< page->num_keys; i++){
 		r= page->record[i];
@@ -87,13 +93,13 @@ for(i = 1; i <=50; i++){
 
 //printf("=========================================\n");
 //print_tree();
-for( i = 0; i< 10000; i++){
-//		num = rand()% 11000;	
-	//	id = rand()%3+1;
+/*for( i = 0; i< 10000; i++){
+		num = rand()% 10000;	
+		id = rand()%4+1;
 //		get_random_str(c);
 //		//printf("delete :%d\n", num);	
 	//	printf("\ndelete : %d\n",i);
-		db_delete(1 ,i);
+		db_delete(id ,num);
 //		print_buf();
 //		printf("%d\n",i);
 	}// print_buf();

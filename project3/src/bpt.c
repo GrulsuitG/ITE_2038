@@ -519,7 +519,17 @@ int cut( int length ) {
         return length/2 + 1;
 }
 
+int index_init(int num_buf){
+	return buf_init(num_buf);
+}
 
+int index_open(int table_id, char* filename){
+	return buf_open(table_id, filename);
+}
+
+int index_close(int table_id){
+	return buf_close(table_id);
+}
 // INSERTION
 
 /* Creates a new record to hold the value

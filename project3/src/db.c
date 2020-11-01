@@ -1,6 +1,5 @@
 #include "db.h"
 
-int unique_id = 1;
 
 int init_db(int num_buf){
 	int i;
@@ -8,11 +7,12 @@ int init_db(int num_buf){
 		return -1;
 	if(init)
 		return -1;
-	if(make_buf(num_buf))
+	if(index_init(num_buf))
 		return -1;
 	for(i =0; i< MAX_TABLE_NUM; i++)
 		tableList[i].is_open = false;
 	init = true;
+	unique_id = 1;
 	return 0;
 }
 
@@ -31,12 +31,15 @@ int open_table(char* pathname){
 
     for(i=0; i<(unique_id-1); i++){    	
         if( strcmp(pathname, tableList[i].name) == 0){
-		tableList[i].is_open = true;
+		if(!tableList[i].is_open){
+			tableList[i].is_open = true;
+			tableList[i].fd =index_open(i+1, tableList[i].name);
+		}
             return i+1;
         }
      }
      
-    make_file(pathname);
+   tableList[unique_id-1].fd =index_open(unique_id, pathname);
     
     tableList[unique_id-1].name = (char*)malloc(strlen(pathname));
     strncpy(tableList[unique_id-1].name , pathname, strlen(pathname));
@@ -108,7 +111,7 @@ int close_table(int table_id){
 		return -1;
 	}
 	if(tableList[table_id-1].is_open){
-		if(buf_close_table(table_id)){
+		if(index_close(table_id)){
 			return -1;
 			}
 		else{
@@ -123,11 +126,8 @@ int shutdown_db(){
 	int i ;
 	for(i = 0; i< MAX_TABLE_NUM; i++){
 		if(tableList[i].is_open){
-			if(buf_close_table(i+1)){
+			if(close_table(i+1)){
 				return -1;
-			}
-			else{
-				tableList[i].is_open = false;
 			}
 		}
 	}

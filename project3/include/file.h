@@ -54,10 +54,10 @@ typedef struct page_t{
 typedef struct table{
 	char* name;
 	bool is_open;
+	int fd;
 }table;
 
-
-extern table tableList[MAX_TABLE_NUM];
+int fdList[MAX_TABLE_NUM];
 
 pagenum_t file_alloc_page(int table_id );
 void file_free_page(int table_id, pagenum_t pagenum);
@@ -65,7 +65,9 @@ void file_read_page(int table_id, pagenum_t pagenum, page_t* dest);
 void file_write_page(int table_id, pagenum_t pagenum, const page_t* src);
 void file_write_root(int table_id, pagenum_t pagenum);
 
-void make_file(char* filname);
+int file_open(int table_id, char* filename);
+int file_close(int table_id);
+int make_file(char* filname);
 int* get_freelist(int table_id);
 page_t* init_page();
 
