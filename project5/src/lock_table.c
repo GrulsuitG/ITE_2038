@@ -7,10 +7,9 @@ int init_lock_table() {
 }
 
 lock_t* lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode) {
-	
 	pthread_mutex_lock(&lock_table_latch);
 	lock_t *obj = lock_make_node();
-	printf("acquire %d : %d, %d\n", trx_id, table_id, key);	
+//	printf("acquire %d : %d, %d\n", trx_id, table_id, key);	
 	lock_t *tmp;
 	int prev_trx_id, flag =0;
 	list *l;
@@ -22,15 +21,6 @@ lock_t* lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode) {
 	obj->lock_mode = lock_mode;
 	obj->trx_id = trx_id;
 	tmp = l->tail;
-	if(tmp != NULL && tmp->trx_id != trx_id){
-		if(detection(trx_id, tmp->trx_id, &flag)){
-			pthread_mutex_unlock(&lock_table_latch);
-			if(flag == 1)
-				return lock_acquire(table_id, key, trx_id, lock_mode);
-			else
-				return NULL;
-		}
-	}
 	if(l->head ==NULL){
 		l->head = obj;
 		l->tail = obj;
@@ -58,14 +48,14 @@ lock_t* lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode) {
 		return tmp;
 	}
 	else if(l->head){
-	/*	
+		
 		if(detection(trx_id, tmp->trx_id, &flag)){
 			pthread_mutex_unlock(&lock_table_latch);
 			if(flag == 1)
 				return lock_acquire(table_id, key, trx_id, lock_mode);
 			else
 				return NULL;
-		}*/
+		}
 		tmp->next = obj;
 		
 		obj->prev = tmp;

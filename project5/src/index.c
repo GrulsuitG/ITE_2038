@@ -460,10 +460,11 @@ int find_range( node * root, int64_t key_start, int64_t key_end, bool verbose,
  * Returns the leaf containing the given key.
  */
 page_t* find_leaf(int table_id, pagenum_t root, int64_t key) {
-    int i,num;
+pthread_mutex_lock(&index_latch);   
+	 int i,num;
     page_t *page = buf_read_page(table_id, root);
     while(!page->is_leaf){
-	printf("a");
+	//printf("a");
 		num = page->num_keys;
 		buf_return_page(table_id, page->mypage, false);
 		if(key<page->keys[0]){
@@ -481,6 +482,7 @@ page_t* find_leaf(int table_id, pagenum_t root, int64_t key) {
 			}
 		
     }
+pthread_mutex_unlock(&index_latch);
 	return page;
     
 }
@@ -511,19 +513,20 @@ record* find(int table_id, pagenum_t *root, int64_t key) {
 }
 
 page_t* find_page(int table_id, int64_t key){
+	
 	 int num, i = 0;
 	pagenum_t root;
 	page_t *header = buf_read_page(table_id, 0);
 	page_t *page;
 	root= header->rootPageNum;
-	printf("a");
+	//printf("a");
 	buf_return_page(table_id, 0, false);
 	if(root == 0){
 		return NULL;
 		}
-    page = find_leaf(table_id, root, key);
-	printf("find %d!\n", page->mypage);
-    return page;
+	//printf("find %d!\n", page->mypage);
+        
+	return find_leaf(table_id, root, key);
 }
 
 /* Finds the appropriate place to
@@ -537,6 +540,7 @@ int cut( int length ) {
 }
 
 int index_init(int num_buf){
+	pthread_mutex_init(&index_latch,0);
 	return buf_init(num_buf);
 }
 

@@ -37,7 +37,7 @@ int trx_commit(int trx_id){
 		l = l->trx_next;
 		lock_release(temp);
 	}
-	printf("%d commit\n", trx_id);
+//	printf("%d commit\n", trx_id);
 	t->init = false;
 /*	tempt= trx_table[index];
 	if(tempt != t){
@@ -115,7 +115,7 @@ bool detection(int trx_id, int wait, int *flag){
 		if(t && t->init){
 			cur = t->lock;
 			while(cur){
-			printf("detect %d\n", i);
+		//	printf("detect %d\n", i);
 					next = cur->next;
 					if(next!= NULL && next->lock_mode ==1){
 						graph[active[next->trx_id]][active[cur->trx_id]] = 1;	
@@ -125,13 +125,13 @@ bool detection(int trx_id, int wait, int *flag){
 		}
 	}
 	graph[active[trx_id]][active[wait]] =1;
-	for(i=0; i<active_num; i++){
+/*	for(i=0; i<active_num; i++){
 		for(int j=0; j<active_num; j++)
 			printf("%d ", graph[i][j]);
 		printf("\n");
 	}
 //	print_buf();
-	printf("===============================\n");
+	printf("===============================\n");*/
 //	printf("%d\n", active_num);
 //	printf("%d %d\n", trx_id, wait);
 	for(i = 0; i<active_num; i++){

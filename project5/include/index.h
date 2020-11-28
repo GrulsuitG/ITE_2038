@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
+#include <pthread.h>
 #include "buffer.h"
 
 #ifdef WINDOWS
@@ -96,7 +97,7 @@ extern node * queue;
  */
 extern bool verbose_output;
 
-
+pthread_mutex_t index_latch;
 // FUNCTION PROTOTYPES.
 
 // Output and utility.

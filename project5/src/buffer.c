@@ -54,12 +54,13 @@ page_t* buf_read_page(int table_id, pagenum_t pagenum){
 	block[index]->ref_bit = true;
 	head = block[index];
 	pthread_mutex_unlock(&buffer_manager_latch);
-	printf("read page  %ld\n", pagenum);
+//	printf("read page  %ld\n", pagenum);
 
 	return block[index]->frame;
 }
 
 void buf_return_page(int table_id, pagenum_t pagenum,  bool is_dirty){
+//	printf("return ");
 	pthread_mutex_lock(&buffer_manager_latch);
 	int index = find_place(table_id, pagenum);
 	page_t* page;
@@ -75,7 +76,7 @@ void buf_return_page(int table_id, pagenum_t pagenum,  bool is_dirty){
 
 	pthread_mutex_unlock(block[index]->page_latch);
 	pthread_mutex_unlock(&buffer_manager_latch);	
-	printf("return page %ld\n", pagenum);
+//	printf("page %ld\n", pagenum);
 }
 
 page_t* buf_alloc_page(int table_id){
@@ -142,7 +143,7 @@ int find_place(int table_id, pagenum_t pagenum){
 }
 
 int eviction(){
-	printf("eviction!\n");
+//	printf("eviction!\n");
 	int num = 0;
 	page_t *page;
 	tail = head->next;

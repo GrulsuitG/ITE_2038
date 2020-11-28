@@ -178,7 +178,7 @@ int db_update(int table_id, int64_t key, char *values, int trx_id){
 	record *r;
     lock_t *l,*tmp;
 	int flag1 =0, flag2 =0;
-  	printf("%d : %d, %d\n", trx_id, table_id, key);
+  //	printf("%d : %d, %d\n", trx_id, table_id, key);
     p = find_page(table_id, key);
 	pagenum = p->mypage;
     if(p == NULL){
@@ -188,8 +188,9 @@ int db_update(int table_id, int64_t key, char *values, int trx_id){
 	for(int i=0; i<p->num_keys; i++){
 		if(p->keys[i] == key){
 			flag2 =1;
-			printf("find record!\n");
-			buf_return_page(table_id, p->mypage, 0);
+		//	printf("find record!\n");
+			buf_return_page(table_id, pagenum, 0);
+		//	printf("bbbbbbb\n");
 			l = lock_acquire(table_id, key, trx_id, 1);
 			if(l == NULL ){
 				trx_abort(trx_id);
@@ -209,11 +210,12 @@ int db_update(int table_id, int64_t key, char *values, int trx_id){
 				t->lock = l;
 				l->pagenum = p->mypage;
 			}
+			break;
 		}
 	}
 	if(flag2 ==1){
-		printf("update! %d,%d\n", table_id,key);
 		p = buf_read_page(table_id,pagenum);
+	//	printf("update! %d,%d\n", table_id,key);
 		for(int i=0; i<p->num_keys; i++){
 			if(p->keys[i] == key){
 				r = p->record[i];

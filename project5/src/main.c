@@ -22,12 +22,12 @@ void* find_func(void *arg){
 	for(int i=0; i<100; i++){
 		id = rand() %2;
 		s = rand() %1000;
-printf("%d th %d\n", i, num);
+//printf("%d th %d\n", i, num);
 		//if(id ==0){
 			//db_find(1, i, value, num);
 		//}
 		//else{
-			db_update(1,s,"asdfsadf",num);
+			db_update(1,i,"asdfsadf",num);
 		//d}
 		
 		//print_buf();
@@ -62,10 +62,10 @@ int main(){
 		num = rand()%1000;
 		db_insert(1,num,"asdfsadf");
 	}*/
-	for(i = 0; i<2; i++){
+	for(i = 0; i<3; i++){
 	pthread_create(&aa[i], 0, find_func, NULL);
 }
-	for(i=0; i<2; i++){
+	for(i=0; i<3; i++){
 	pthread_join(aa[i], NULL);
 	}
 	id = trx_begin();
