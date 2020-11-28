@@ -18,16 +18,28 @@ void get_random_str(char* data) {
 void* find_func(void *arg){
 	char * value = malloc(120);
 	int num = trx_begin();
-	db_find(1,2,value,num);
-	sleep(2);
-	db_update(1,2,"value",num);
+	int id, s;
+	for(int i=0; i<100; i++){
+		id = rand() %2;
+		s = rand() %1000;
+printf("%d th %d\n", i, num);
+		//if(id ==0){
+			//db_find(1, i, value, num);
+		//}
+		//else{
+			db_update(1,s,"asdfsadf",num);
+		//d}
+		
+		//print_buf();
+	}
 	trx_commit(num);
 }
 void* func(void *arg){
 	char * value =malloc(120);
 
 	int num =trx_begin();
-	db_find(1,2,value,num);
+	//printf("a");
+	db_update(1,2,"value",num);
 	trx_commit(num);
 }
 
@@ -44,16 +56,25 @@ int main(){
 	
 	//printf("%d",open_table("db"));
 	//printf("%d",open_table("gg"));
-	init_db(100);
+	init_db(431);
 	num = open_table("db");
-	pthread_create(&aa[0], 0, find_func, NULL);
-	sleep(1);
-	pthread_create(&aa[1], 0, func, NULL);
-
-	pthread_join(aa[0], NULL);
-	pthread_join(aa[1], NULL);
-	
-	
+	/*for(i = 0; i<1000; i++){
+		num = rand()%1000;
+		db_insert(1,num,"asdfsadf");
+	}*/
+	for(i = 0; i<2; i++){
+	pthread_create(&aa[i], 0, find_func, NULL);
+}
+	for(i=0; i<2; i++){
+	pthread_join(aa[i], NULL);
+	}
+	id = trx_begin();
+	//db_update(1,10,"adadfbv", id);
+/*	for(i = 0; i<1000; i++){
+		db_find(1,i,c,id);
+		printf("%s\n",c);
+	}*/
+	trx_commit(id);
 shutdown_db();
 //print_tree(1);
 

@@ -105,48 +105,60 @@ int db_find(int table_id, int64_t key, char *ret_val, int trx_id){
 		}	
 	page_t *p;
 	record *r;
-    lock_t *l;
-	int index;
+    lock_t *l, *tmp;
+	int index, flag =0;;
     p = find_page(table_id, key);
     if(p == NULL){
 		trx_abort(trx_id);
         return -1;
     }
-	index = find_place(table_id, p->mypage);
 	for(int i=0; i<p->num_keys; i++){
 		if(p->keys[i] == key){
 			r = p->record[i];
+			buf_return_page(table_id, p->mypage,0);
 			l = lock_acquire(table_id, key, trx_id, 0);
 			if(l == NULL){
-				pthread_mutex_unlock(block[index]->page_latch);
 				trx_abort(trx_id);
 				return -1;
 			}
+			tmp= t->lock;
+			while(tmp!= NULL){
+				if(tmp == l){
+					flag =1;
+					break;
+				}
+				tmp = tmp->trx_next;
+			}
+			if(flag ==0){
 				l->trx_next = t->lock;
 				t->lock = l;
 				l->pagenum = p->mypage;
-			pthread_mutex_unlock(block[index]->page_latch);
+			}
 		}
 	}
 	if(r ==NULL){
-		pthread_mutex_unlock(block[index]->page_latch);
 		trx_abort(trx_id);
 		return -1;
 	}
     else{
-		pthread_mutex_lock(block[index]->page_latch);
+		p = buf_read_page(table_id, l->pagenum);
+		for(int i=0; i<p->num_keys; i++){
+			if(p->keys[i] == key){
+				r = p->record[i];
+				break;
+			}
+		}
         strncpy(ret_val, r->value, VALUE_SIZE);
-		pthread_mutex_unlock(block[index]->page_latch);
-    	return 0;
+    	buf_return_page(table_id, l->pagenum, 0);
+		return 0;
 	}
 
 }
 int db_update(int table_id, int64_t key, char *values, int trx_id){
-  	if(!init){
+	if(!init){
 		trx_abort(trx_id);
 		return -1;
 	}
-  	
   	if(!tableList[table_id-1].is_open){
 		trx_abort(trx_id);
 		return -1;
@@ -162,40 +174,61 @@ int db_update(int table_id, int64_t key, char *values, int trx_id){
 		return -1;
 	}
 	page_t *p;
+	pagenum_t pagenum;
 	record *r;
-    lock_t *l;
-	int index;
+    lock_t *l,*tmp;
+	int flag1 =0, flag2 =0;
+  	printf("%d : %d, %d\n", trx_id, table_id, key);
     p = find_page(table_id, key);
+	pagenum = p->mypage;
     if(p == NULL){
 		trx_abort(trx_id);
         return -1;
     }
-	index = find_place(table_id, p->mypage);
 	for(int i=0; i<p->num_keys; i++){
 		if(p->keys[i] == key){
-			r = p->record[i];
+			flag2 =1;
+			printf("find record!\n");
+			buf_return_page(table_id, p->mypage, 0);
 			l = lock_acquire(table_id, key, trx_id, 1);
 			if(l == NULL ){
-				pthread_mutex_unlock(block[index]->page_latch);
 				trx_abort(trx_id);
 				return -1;
 			}
+			tmp= t->lock;
+			while(tmp!= NULL){
+				if(tmp == l){
+					flag1 =1;
+					break;
+				}
+
+				tmp = tmp->trx_next;
+			}
+			if(flag1 ==0){
 				l->trx_next = t->lock;
 				t->lock = l;
 				l->pagenum = p->mypage;
-			pthread_mutex_unlock(block[index]->page_latch);
+			}
 		}
 	}
-	if(r == NULL){
-		trx_abort(trx_id);
-		return -1;
-	}
-	else{
-		p = buf_read_page(table_id,l->pagenum);
+	if(flag2 ==1){
+		printf("update! %d,%d\n", table_id,key);
+		p = buf_read_page(table_id,pagenum);
+		for(int i=0; i<p->num_keys; i++){
+			if(p->keys[i] == key){
+				r = p->record[i];
+				break;
+			}
+		}
 		strncpy(l->stored, r->value, VALUE_SIZE);
 		strncpy(r->value, values, VALUE_SIZE);
-		buf_return_page(table_id, l->pagenum, 1);
+		buf_return_page(table_id, pagenum, 1);
 		return 0;
+	}
+	else{
+		buf_return_page(table_id, p->mypage,0);
+		trx_abort(trx_id);
+		return-1;
 	}
 	
 }

@@ -49,6 +49,8 @@ typedef struct page_t{
 	pagenum_t *pagenum;
 
 	pagenum_t mypage;
+
+	int index;
 }page_t;
 
 

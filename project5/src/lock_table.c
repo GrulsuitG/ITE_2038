@@ -7,12 +7,13 @@ int init_lock_table() {
 }
 
 lock_t* lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode) {
-	lock_t *obj = lock_make_node();
 	
-	lock_t *tmp;
-	list *l;
-	int flag;
 	pthread_mutex_lock(&lock_table_latch);
+	lock_t *obj = lock_make_node();
+	printf("acquire %d : %d, %d\n", trx_id, table_id, key);	
+	lock_t *tmp;
+	int prev_trx_id, flag =0;
+	list *l;
 	l = hash_find(table_id, key, lock_table);
 	if (l == NULL){
 		l = hash_add(table_id, key, lock_table);
@@ -21,6 +22,15 @@ lock_t* lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode) {
 	obj->lock_mode = lock_mode;
 	obj->trx_id = trx_id;
 	tmp = l->tail;
+	if(tmp != NULL && tmp->trx_id != trx_id){
+		if(detection(trx_id, tmp->trx_id, &flag)){
+			pthread_mutex_unlock(&lock_table_latch);
+			if(flag == 1)
+				return lock_acquire(table_id, key, trx_id, lock_mode);
+			else
+				return NULL;
+		}
+	}
 	if(l->head ==NULL){
 		l->head = obj;
 		l->tail = obj;
@@ -30,58 +40,78 @@ lock_t* lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode) {
 	else if(tmp != NULL && tmp->trx_id == trx_id){
 		if(tmp->lock_mode ==0){
 			if(lock_mode ==1){
+				tmp->lock_mode =1;
 				if(tmp->prev){
-					pthread_cond_wait(tmp->prev->cond, &lock_table_latch);
+					do{
+						prev_trx_id =tmp->prev->trx_id;
+						pthread_cond_wait(tmp->prev->cond, &lock_table_latch);
+						if(tmp->prev ==NULL){
+							break;
+						}
+					}while(prev_trx_id !=tmp->prev->trx_id);
 					pthread_mutex_lock(l->mutex);
 				}
-				obj->get = true;
 			}
 		}
-		tmp->next = obj;
-		obj->prev = tmp;
-		l->tail = obj;
+		tmp->get = true;
+		pthread_mutex_unlock(&lock_table_latch);	
+		return tmp;
 	}
 	else if(l->head){
-		
+	/*	
 		if(detection(trx_id, tmp->trx_id, &flag)){
 			pthread_mutex_unlock(&lock_table_latch);
 			if(flag == 1)
 				return lock_acquire(table_id, key, trx_id, lock_mode);
 			else
 				return NULL;
-		}
+		}*/
 		tmp->next = obj;
 		
 		obj->prev = tmp;
 		l->tail = obj;
 		if(lock_mode == 0){
 			if(tmp->lock_mode == 0){
-				if(tmp->get){
-					obj->get = true;
-				}
-				else if (tmp->get == false){
-					pthread_cond_wait(tmp->cond, &lock_table_latch);
-					obj->get = true;
+				if (tmp->get == false){
+					do{
+						tmp = obj->prev;
+						prev_trx_id = tmp->trx_id;
+						pthread_cond_wait(tmp->cond, &lock_table_latch);
+						if(obj->prev == NULL){
+							break;
+						}
+					}while(prev_trx_id != tmp->trx_id);
 					tmp = obj->next;
 					if(tmp && tmp->lock_mode == 0)
 						pthread_cond_signal(obj->cond);
 				}
 			}
 			else if(tmp->lock_mode == 1){
-				pthread_cond_wait(tmp->cond, &lock_table_latch);
+				do{
+					tmp = obj->prev;
+					prev_trx_id = tmp->trx_id;
+					pthread_cond_wait(tmp->cond, &lock_table_latch);
+					if(obj->prev == NULL)
+						break;
+				}while(prev_trx_id != tmp->trx_id);
 				pthread_mutex_lock(l->mutex);
-				obj->get = true;
 				tmp = obj->next;
 				if( tmp && tmp->lock_mode == 0)
 					pthread_cond_signal(obj->cond);
 			}
 		}
 		else if(lock_mode == 1){
-			pthread_cond_wait(tmp->cond, &lock_table_latch);
+			do{
+				tmp = obj->prev;
+				prev_trx_id = tmp->trx_id;
+				pthread_cond_wait(tmp->cond, &lock_table_latch);
+				if(obj->prev == NULL)
+					break;
+			}while(prev_trx_id != tmp->trx_id);
 			pthread_mutex_lock(l->mutex);
-			obj->get = true;
 		}
 	}
+	obj->get =true;
 	pthread_mutex_unlock(&lock_table_latch);
 	return obj;
 }
@@ -89,21 +119,28 @@ lock_t* lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode) {
 int lock_release(lock_t* lock_obj) {
 	list *l = lock_obj->pointer;
 	pthread_mutex_lock(&lock_table_latch);
-	if(l->head == l->tail){
+/*	if(l->head == l->tail){
 		l->head = NULL;
 		l->tail = NULL;
 	}
-	else if(l->head != l->tail ){
-		l->head= lock_obj->next;
+	else if(l->head != l->tail ){*/
+		if(l->head == lock_obj)
+			l->head = lock_obj->next;
+		else if(l->tail == lock_obj)
+			l->tail =lock_obj->prev;
 		if(l->head)
 			l->head->prev = NULL;
+		if(lock_obj->prev)
+			lock_obj->prev->next= lock_obj->next;
+		if(lock_obj->next)
+			lock_obj->next->prev = lock_obj->prev;
 		pthread_cond_signal(lock_obj->cond);
 			
-	}
+//	}
 	pthread_mutex_unlock(l->mutex);
  	pthread_mutex_unlock(&lock_table_latch);
-	free(lock_obj->cond);
-	free(lock_obj->stored);
+//	free(lock_obj->cond);
+//	free(lock_obj->stored);
 	free(lock_obj);
 	return 0;
 }
@@ -117,6 +154,7 @@ lock_t* lock_make_node(){
 	node->stored = (char*) malloc(VALUE_SIZE);
 	node->cond = (pthread_cond_t*)malloc(sizeof(pthread_cond_t));
 	pthread_cond_init(node->cond,0);
+	node->get =false;
 	node->pointer = NULL;
 	node->next = NULL;
 	node->prev = NULL;

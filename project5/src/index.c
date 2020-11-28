@@ -463,6 +463,7 @@ page_t* find_leaf(int table_id, pagenum_t root, int64_t key) {
     int i,num;
     page_t *page = buf_read_page(table_id, root);
     while(!page->is_leaf){
+	printf("a");
 		num = page->num_keys;
 		buf_return_page(table_id, page->mypage, false);
 		if(key<page->keys[0]){
@@ -515,11 +516,13 @@ page_t* find_page(int table_id, int64_t key){
 	page_t *header = buf_read_page(table_id, 0);
 	page_t *page;
 	root= header->rootPageNum;
+	printf("a");
 	buf_return_page(table_id, 0, false);
 	if(root == 0){
 		return NULL;
 		}
     page = find_leaf(table_id, root, key);
+	printf("find %d!\n", page->mypage);
     return page;
 }
 

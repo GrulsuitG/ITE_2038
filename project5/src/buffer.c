@@ -49,11 +49,12 @@ page_t* buf_read_page(int table_id, pagenum_t pagenum){
 		}
 
 	pthread_mutex_lock(block[index]->page_latch);
-	pthread_mutex_unlock(&buffer_manager_latch);
 	block[index]->table_id = table_id;
 	block[index]->pagenum = pagenum;
 	block[index]->ref_bit = true;
 	head = block[index];
+	pthread_mutex_unlock(&buffer_manager_latch);
+	printf("read page  %ld\n", pagenum);
 
 	return block[index]->frame;
 }
@@ -67,13 +68,14 @@ void buf_return_page(int table_id, pagenum_t pagenum,  bool is_dirty){
 		block[index] ->pagenum = pagenum;
 		block[index] ->table_id = table_id;
 	}
-	pthread_mutex_unlock(&buffer_manager_latch);	
 	if(is_dirty)
 		block[index] -> is_dirty = is_dirty;
 	block[index] -> ref_bit = true;
 	head = block[index];
 
 	pthread_mutex_unlock(block[index]->page_latch);
+	pthread_mutex_unlock(&buffer_manager_latch);	
+	printf("return page %ld\n", pagenum);
 }
 
 page_t* buf_alloc_page(int table_id){
@@ -105,14 +107,14 @@ void buf_free_page(int table_id, pagenum_t pagenum){
 
 
 int find_empty(int table_id, pagenum_t pagenum){
-	int num = (table_id+5*pagenum)%buf_size;
-
+	int num = (table_id+10*pagenum)%buf_size;
+	int flag =num;
 	if(block[num]->table_id == 0){
 		return num;
 	}
 	num = (num+1) % buf_size;
 	
-	while(num != (table_id+5*pagenum)%buf_size){
+	while(num != flag){
 		if(block[num]->table_id ==0){
 			return num;
 		}
@@ -124,14 +126,13 @@ int find_empty(int table_id, pagenum_t pagenum){
 }
 
 int find_place(int table_id, pagenum_t pagenum){
-	int num;
-	num = (table_id+5*pagenum)% buf_size;
-
+	int num = (table_id+10*pagenum)% buf_size;
+	int flag =num;
 	if(block[num]->table_id == table_id && block[num]->pagenum == pagenum)
 		return num;
 	
 	num = (num+1) % buf_size;
-	while(num != (table_id+5*pagenum) % buf_size){
+	while(num != flag){
 		if(block[num]->table_id == table_id && block[num]-> pagenum == pagenum)
 			return num;
 		num = (num+1) % buf_size;
@@ -141,12 +142,13 @@ int find_place(int table_id, pagenum_t pagenum){
 }
 
 int eviction(){
+	printf("eviction!\n");
 	int num = 0;
 	page_t *page;
 	tail = head->next;
 	while(true){
 		if(tail->ref_bit == false ){
-			pthread_mutex_lock(tail->page_latch);
+				pthread_mutex_lock(tail->page_latch);
 				if(tail->is_dirty){
 					page = (page_t*)tail->frame;
 					if(tail->pagenum ==0){
@@ -159,9 +161,9 @@ int eviction(){
 				buf_clear(tail->id);
 				head = tail;
 				pthread_mutex_unlock(tail->page_latch);
-			
 				return find_place(tail->table_id, tail->pagenum);
-			}
+			
+		}
 		
 		else if(tail->ref_bit == true){
 			tail->ref_bit = false;

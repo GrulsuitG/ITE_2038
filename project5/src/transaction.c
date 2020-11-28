@@ -10,6 +10,7 @@ int trx_begin(){
 	trxList* t = trx_hash_add(global_trx_id, trx_table);
 	t->id = global_trx_id;
 	t->init = true;
+	t->lock = NULL;
 	active_num++;
 	pthread_mutex_unlock(&trx_manager_latch);
 	return global_trx_id++;
@@ -19,7 +20,7 @@ int trx_commit(int trx_id){
 	pthread_mutex_lock(&trx_manager_latch);
 	int index = trx_hash(trx_id);
 	trxList* t = trx_hash_find(trx_id, trx_table);
-	trxList* tempt;
+//	trxList* tempt;
 	if(t == NULL){
 		pthread_mutex_unlock(&trx_manager_latch);
 		return 0;
@@ -36,15 +37,16 @@ int trx_commit(int trx_id){
 		l = l->trx_next;
 		lock_release(temp);
 	}
+	printf("%d commit\n", trx_id);
 	t->init = false;
-	tempt= trx_table[index];
+/*	tempt= trx_table[index];
 	if(tempt != t){
 		while(tempt->link != t)
 			tempt = tempt->link;
 	}
-	tempt->link = t->link;
+	tempt->link = t->link;*/
 	active_num--;
-	free(t);
+//	free(t);
 	pthread_mutex_unlock(&trx_manager_latch);
 	return trx_id;
 
@@ -89,7 +91,7 @@ trxList* trx_hash_find(int trx_id, trxList *ht[]){
 bool detection(int trx_id, int wait, int *flag){
 	pthread_mutex_lock(&trx_manager_latch);
 	trxList* t;
-	lock_t *cur, *prev;
+	lock_t *cur, *next;
 	int i, id = 0;
 	int active[global_trx_id];
 	int visit[active_num];
@@ -110,23 +112,26 @@ bool detection(int trx_id, int wait, int *flag){
 	}
 	for(i =1; i<=active_num; i++){
 		t = trx_hash_find(i, trx_table);
-		if(t){
+		if(t && t->init){
 			cur = t->lock;
 			while(cur){
-					prev = cur->prev;
-					if(prev){
-						graph[active[cur->trx_id]][active[prev->trx_id]] = 1;	
+			printf("detect %d\n", i);
+					next = cur->next;
+					if(next!= NULL && next->lock_mode ==1){
+						graph[active[next->trx_id]][active[cur->trx_id]] = 1;	
 					}
 				cur = cur->trx_next;
 			}
 		}
 	}
 	graph[active[trx_id]][active[wait]] =1;
-/*	for(i=0; i<active_num; i++){
+	for(i=0; i<active_num; i++){
 		for(int j=0; j<active_num; j++)
 			printf("%d ", graph[i][j]);
 		printf("\n");
-	}*/
+	}
+//	print_buf();
+	printf("===============================\n");
 //	printf("%d\n", active_num);
 //	printf("%d %d\n", trx_id, wait);
 	for(i = 0; i<active_num; i++){
@@ -139,10 +144,10 @@ bool detection(int trx_id, int wait, int *flag){
 			visit[j] =0;
 		}
 	}
-	for(i =0; i<active_num; i++){
+/*	for(i =0; i<active_num; i++){
 		free(graph[i]);
 	}
-	free(graph);
+	free(graph);*/
 	pthread_mutex_unlock(&trx_manager_latch);
 	return result;
 }
@@ -160,7 +165,7 @@ bool dfs(int v, int visit[]){
 }
 
 void trx_abort(int trx_id){
-//	printf("abort\n");
+	printf("abort %d\n", trx_id);
 	pthread_mutex_lock(&trx_manager_latch);
 	trxList *t = trx_hash_find(trx_id, trx_table);
 	int index;
@@ -188,11 +193,6 @@ void trx_abort(int trx_id){
 					cur->next->prev = cur->prev;
 				}
 			}
-			else{
-				temp =cur;
-				lock_release(temp);
-			}
-			cur = cur->trx_next;
 		}
 		else if(cur->lock_mode ==1){
 			l = cur->pointer;
@@ -207,21 +207,22 @@ void trx_abort(int trx_id){
 				strncpy(r->value, cur->stored, VALUE_SIZE);
 			}
 			buf_return_page(l->table_id, cur->pagenum, 1);
-			temp = cur;
-			cur = cur->trx_next;
-			lock_release(temp);
 		}
-		
+		temp = cur;
+		cur = cur->trx_next;
+		lock_release(temp);
+	
 	}
 	t->init = false;
-	index= trx_hash(trx_id);
-	tmp = trx_table[index];
+//	index= trx_hash(trx_id);
+
+/*	tmp = trx_table[index];
 	if(tmp !=t)
 		while(tmp->link != t)
 			tmp = tmp->link;
 	tmp->link = t->link;
-
-	free(t);
+*/
+	//free(t);
 	active_num--;
 	pthread_mutex_unlock(&trx_manager_latch);
 }
