@@ -4,23 +4,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+
+typedef struct trxList trxList;
 #include "lock_table.h"
 #include "buffer.h"
-#define TRX_TABLE_SIZE 431
+#define TRX_TABLE_SIZE 4321
 
 
-unsigned global_trx_id;
-int active_num;
+int global_trx_id;
 int **graph;
+bool cycle;
 pthread_mutex_t trx_manager_latch;
 
-typedef struct trxList{
+struct trxList{
 	unsigned id;
-	lock_t * lock;
-	
+	lock_t *lock;
+	pthread_mutex_t *mutex;	
+
 	struct trxList *link;
 	bool init;
-}trxList;
+};
 
 
 trxList *trx_table[TRX_TABLE_SIZE];
@@ -29,8 +32,8 @@ void init_trx();
 int trx_begin();
 int trx_commit(int trx_id);
 
-bool dfs(int v, int visit[]);
-bool detection(int trx_id, int wait, int *flag);
+void dfs(int v, int visit[], int n);
+bool detection(int trx_id, int wait);
 void trx_abort(int trx_id);
 
 trxList* trx_make_list();

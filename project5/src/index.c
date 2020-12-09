@@ -460,11 +460,9 @@ int find_range( node * root, int64_t key_start, int64_t key_end, bool verbose,
  * Returns the leaf containing the given key.
  */
 page_t* find_leaf(int table_id, pagenum_t root, int64_t key) {
-pthread_mutex_lock(&index_latch);   
 	 int i,num;
     page_t *page = buf_read_page(table_id, root);
     while(!page->is_leaf){
-	//printf("a");
 		num = page->num_keys;
 		buf_return_page(table_id, page->mypage, false);
 		if(key<page->keys[0]){
@@ -479,10 +477,9 @@ pthread_mutex_lock(&index_latch);
 		}
 		if(i == num && page->keys[i-1] <= key){
 			page = buf_read_page(table_id, page->pagenum[i-1]);
-			}
+		}
 		
     }
-pthread_mutex_unlock(&index_latch);
 	return page;
     
 }
@@ -504,29 +501,50 @@ record* find(int table_id, pagenum_t *root, int64_t key) {
 	buf_return_page(table_id, page->mypage, false);
     for (i = 0; i < page->num_keys; i++)
         if (page->keys[i] == key) break;
-    if (i == page->num_keys) 
+    if (i == page->num_keys){
         return NULL;
+    }
     else{
         return page->record[i];
     }
 	return NULL;
 }
 
-page_t* find_page(int table_id, int64_t key){
-	
-	 int num, i = 0;
-	pagenum_t root;
+record* find_record(int table_id, int64_t key, int trx_id, trxList *t, lock_t *lock_obj){
+	int ret, i = 0;
 	page_t *header = buf_read_page(table_id, 0);
 	page_t *page;
-	root= header->rootPageNum;
-	//printf("a");
+	pagenum_t pagenum;
 	buf_return_page(table_id, 0, false);
-	if(root == 0){
+	if(header->rootPageNum == 0){
 		return NULL;
+	}
+    page = find_leaf(table_id, header->rootPageNum, key);
+	pagenum =page->mypage;
+    for (i = 0; i < page->num_keys; i++)
+        if (page->keys[i] == key) break;
+    if (i == page->num_keys){
+    	buf_return_page(table_id, page->mypage, false);
+        return NULL;
+    }
+    else{
+    	ret = lock_acquire(table_id, key, trx_id, 0 ,lock_obj, t);
+   	ret = 0;
+		if(ret == ACQUIRED){
+			buf_return_page(table_id, page->mypage, false);
+			return page->record[i];
 		}
-	//printf("find %d!\n", page->mypage);
-        
-	return find_leaf(table_id, root, key);
+		else if(ret == NEED_TO_WAIT){
+			buf_return_page(table_id, page->mypage, false);
+			lock_wait(lock_obj);
+			return NULL;
+		}
+		else if(ret == DEADLOCK){
+			buf_return_page(table_id, page->mypage, false);
+			return NULL;
+		}
+    }
+
 }
 
 /* Finds the appropriate place to
@@ -540,7 +558,6 @@ int cut( int length ) {
 }
 
 int index_init(int num_buf){
-	pthread_mutex_init(&index_latch,0);
 	return buf_init(num_buf);
 }
 

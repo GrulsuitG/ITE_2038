@@ -1,8 +1,8 @@
 #ifndef __DB_H__
 #define __DB_H__
-#include "index.h"
 #include "transaction.h"
 #include "lock_table.h"
+#include "index.h"
 
 
 

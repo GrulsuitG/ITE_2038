@@ -6,133 +6,147 @@ int init_lock_table() {
 	return 0;
 }
 
-lock_t* lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode) {
+int lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode, lock_t* ret_lock, trxList* t) {
 	pthread_mutex_lock(&lock_table_latch);
-	lock_t *obj = lock_make_node();
-//	printf("acquire %d : %d, %d\n", trx_id, table_id, key);	
+	ret_lock = lock_make_node();
+	
 	lock_t *tmp;
-	int prev_trx_id, flag =0;
 	list *l;
 	l = hash_find(table_id, key, lock_table);
 	if (l == NULL){
 		l = hash_add(table_id, key, lock_table);
 	}
-	obj->pointer = l;
-	obj->lock_mode = lock_mode;
-	obj->trx_id = trx_id;
-	tmp = l->tail;
-	if(l->head ==NULL){
-		l->head = obj;
-		l->tail = obj;
-		obj->get = true;
+	ret_lock->pointer = l;
+	ret_lock->lock_mode = lock_mode;
+	ret_lock->trx_id = trx_id;
+	
+	ret_lock->trx_next = t->lock;
+	t->lock = ret_lock;
+	
+	//lock 오브젝트를 처음 다는 경우
+	if(l->head == NULL){
+		l->head = ret_lock;
+		l->tail = ret_lock;
 		pthread_mutex_lock(l->mutex);
+		ret_lock->get_mutex = true;
+		ret_lock->get = true;
+		pthread_mutex_unlock(&lock_table_latch);
+		return ACQUIRED;
 	}
-	else if(tmp != NULL && tmp->trx_id == trx_id){
-		if(tmp->lock_mode ==0){
-			if(lock_mode ==1){
-				tmp->lock_mode =1;
+	//앞에 달린 lock오브젝트가 있는 경우
+	else{
+		tmp = l->tail;
+		l->tail = ret_lock;
+		tmp->next = ret_lock;
+		ret_lock->prev = tmp;
+		//앞 lock 오브젝트의 trx_id 가 자기와 같은 경우
+		if(tmp->trx_id == trx_id){
+			if(tmp->lock_mode == 0 && lock_mode == 1){
+				//othertrx_lock(0) -> my_prev_lock(0) -> my_cur_lock(1)
 				if(tmp->prev){
-					do{
-						prev_trx_id =tmp->prev->trx_id;
-						pthread_cond_wait(tmp->prev->cond, &lock_table_latch);
-						if(tmp->prev ==NULL){
-							break;
-						}
-					}while(prev_trx_id !=tmp->prev->trx_id);
-					pthread_mutex_lock(l->mutex);
+					printf("a");
+					pthread_mutex_unlock(&lock_table_latch);
+					return NEED_TO_WAIT;
 				}
+				// othertrx_lock 이 없으면 바로 mutex 획득 가능
+				
 			}
-		}
-		tmp->get = true;
-		pthread_mutex_unlock(&lock_table_latch);	
-		return tmp;
-	}
-	else if(l->head){
-		
-		if(detection(trx_id, tmp->trx_id, &flag)){
+			// lock_mode 를 exclusive로 업그레이드 해서 List에 달아줌.
+			else if(tmp->lock_mode ==1 && lock_mode == 0){
+				ret_lock->lock_mode =1;
+				
+			}
+			ret_lock->get = true;
 			pthread_mutex_unlock(&lock_table_latch);
-			if(flag == 1)
-				return lock_acquire(table_id, key, trx_id, lock_mode);
-			else
-				return NULL;
+			return ACQUIRED;
 		}
-		tmp->next = obj;
+		//앞 lock 오브젝트랑 trx_id가 다른 경우
+		else {
+			if(detection(trx_id, tmp->trx_id)){
+				pthread_mutex_unlock(&lock_table_latch);
+				return DEADLOCK;
+			}
+			
+			//ret_lock의 앞에 달린 lock오브젝트가 shared 나도 shared
+			if(tmp->lock_mode == 0 && lock_mode == 0){
+					if(tmp->get == false){
+						pthread_mutex_unlock(&lock_table_latch);
+						return NEED_TO_WAIT;
+					}
+					if(tmp->get == true){
+						ret_lock->get = true;
+						pthread_mutex_unlock(&lock_table_latch);
+						return ACQUIRED;
+					}
+			}
+			//앞에 달린 lock이 shared 내가 exclusive
+ 			else if(tmp->lock_mode ==0 && lock_mode == 1){
+  				pthread_mutex_unlock(&lock_table_latch);
+  				return NEED_TO_WAIT;
+ 			}
+			//앞에 달린 Lock이 exclusive 인 경우
+			else if(tmp->lock_mode ==1){
+				pthread_mutex_unlock(&lock_table_latch);
+  				return NEED_TO_WAIT;
+			}
+		}
 		
-		obj->prev = tmp;
-		l->tail = obj;
-		if(lock_mode == 0){
-			if(tmp->lock_mode == 0){
-				if (tmp->get == false){
-					do{
-						tmp = obj->prev;
-						prev_trx_id = tmp->trx_id;
-						pthread_cond_wait(tmp->cond, &lock_table_latch);
-						if(obj->prev == NULL){
-							break;
-						}
-					}while(prev_trx_id != tmp->trx_id);
-					tmp = obj->next;
-					if(tmp && tmp->lock_mode == 0)
-						pthread_cond_signal(obj->cond);
-				}
-			}
-			else if(tmp->lock_mode == 1){
-				do{
-					tmp = obj->prev;
-					prev_trx_id = tmp->trx_id;
-					pthread_cond_wait(tmp->cond, &lock_table_latch);
-					if(obj->prev == NULL)
-						break;
-				}while(prev_trx_id != tmp->trx_id);
-				pthread_mutex_lock(l->mutex);
-				tmp = obj->next;
-				if( tmp && tmp->lock_mode == 0)
-					pthread_cond_signal(obj->cond);
-			}
-		}
-		else if(lock_mode == 1){
-			do{
-				tmp = obj->prev;
-				prev_trx_id = tmp->trx_id;
-				pthread_cond_wait(tmp->cond, &lock_table_latch);
-				if(obj->prev == NULL)
-					break;
-			}while(prev_trx_id != tmp->trx_id);
-			pthread_mutex_lock(l->mutex);
-		}
 	}
-	obj->get =true;
 	pthread_mutex_unlock(&lock_table_latch);
-	return obj;
+	return ACQUIRED;
+	
 }
 
-int lock_release(lock_t* lock_obj) {
-	list *l = lock_obj->pointer;
+int lock_release(lock_t* lock_obj, int aborted) {
 	pthread_mutex_lock(&lock_table_latch);
-/*	if(l->head == l->tail){
+	list *l = lock_obj->pointer;
+	lock_t *tmp;
+	
+	
+	// 1개 인경우
+	if(l->tail == l->head){
 		l->head = NULL;
 		l->tail = NULL;
+		
 	}
-	else if(l->head != l->tail ){*/
-		if(l->head == lock_obj)
-			l->head = lock_obj->next;
-		else if(l->tail == lock_obj)
-			l->tail =lock_obj->prev;
-		if(l->head)
-			l->head->prev = NULL;
-		if(lock_obj->prev)
-			lock_obj->prev->next= lock_obj->next;
-		if(lock_obj->next)
-			lock_obj->next->prev = lock_obj->prev;
+	// 마지막인경우
+	else if(l->tail == lock_obj && l->head != lock_obj){
+		l->tail = lock_obj->prev;
+	}
+	// 여러개 중 list의 가장 첫번째 인 경우
+	else if(l->head == lock_obj){
+		tmp = lock_obj->next;
+		l->head =tmp;
+		tmp->prev = NULL;
+		
+		if(aborted ==1){
+			tmp->prev_lock_aborted = true;
+		}
 		pthread_cond_signal(lock_obj->cond);
-			
-//	}
-	pthread_mutex_unlock(l->mutex);
- 	pthread_mutex_unlock(&lock_table_latch);
-//	free(lock_obj->cond);
-//	free(lock_obj->stored);
+	}
+	// list 중간에 있는 경우
+	else{
+		lock_obj->next->prev = lock_obj->prev;
+		lock_obj->prev->next = lock_obj->next;
+		if(aborted ==1){
+			lock_obj->next->prev_lock_aborted = true;
+		}
+		pthread_cond_signal(lock_obj->cond);
+	}
+	
+	if(lock_obj->get_mutex)
+		pthread_mutex_unlock(l->mutex);
+	
+ 	
+	//free(lock_obj->cond);
+	free(lock_obj->stored);
 	free(lock_obj);
+	pthread_mutex_unlock(&lock_table_latch);
 	return 0;
+}
+
+void lock_wait(lock_t *lock_obj){
+	
 }
 
 lock_t* lock_make_node(){
@@ -145,6 +159,7 @@ lock_t* lock_make_node(){
 	node->cond = (pthread_cond_t*)malloc(sizeof(pthread_cond_t));
 	pthread_cond_init(node->cond,0);
 	node->get =false;
+	node->prev_lock_aborted = false;
 	node->pointer = NULL;
 	node->next = NULL;
 	node->prev = NULL;

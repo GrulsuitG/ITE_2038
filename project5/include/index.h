@@ -9,7 +9,10 @@
 #include <stdint.h>
 #include <string.h>
 #include <pthread.h>
+
 #include "buffer.h"
+#include "lock_table.h"
+#include "transaction.h"
 
 #ifdef WINDOWS
 #define bool char
@@ -120,7 +123,7 @@ int find_range( node * root, int64_t key_start, int64_t key_end, bool verbose,
         int64_t returned_keys[], void * returned_pointers[]); */
 page_t * find_leaf(int table_id, pagenum_t root, int64_t key);
 record* find(int table_id, pagenum_t *root, int64_t key);
-page_t* find_page(int table_id, int64_t key);
+record* find_record(int table_id, int64_t key, int trx_id, trxList* t, lock_t* lock_obj);
 int cut( int length );
 
 int index_init(int num_buf);

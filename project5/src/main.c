@@ -2,6 +2,8 @@
 #include<time.h>
 #include<pthread.h>
 
+#define THREAD_NUM 10
+
 int get_random_number(int from, int to) {
 	return rand() % (to - from + 1) + from;
 }
@@ -20,17 +22,11 @@ void* find_func(void *arg){
 	int num = trx_begin();
 	int id, s;
 	for(int i=0; i<100; i++){
-		id = rand() %2;
-		s = rand() %1000;
-//printf("%d th %d\n", i, num);
-		//if(id ==0){
-			//db_find(1, i, value, num);
-		//}
-		//else{
-			db_update(1,i,"asdfsadf",num);
-		//d}
+		s = rand() %100;
+		//lock_acquire(1, s, num, 0);
+		db_find(1,s,value,num);
+		//printf("%s\n", value);
 		
-		//print_buf();
 	}
 	trx_commit(num);
 }
@@ -52,7 +48,7 @@ int main(){
 	record *r;
 	srand(time(0));
 	
-	pthread_t aa[10];
+	pthread_t aa[THREAD_NUM];
 	
 	//printf("%d",open_table("db"));
 	//printf("%d",open_table("gg"));
@@ -62,20 +58,20 @@ int main(){
 		num = rand()%1000;
 		db_insert(1,num,"asdfsadf");
 	}*/
-	for(i = 0; i<3; i++){
-	pthread_create(&aa[i], 0, find_func, NULL);
-}
-	for(i=0; i<3; i++){
-	pthread_join(aa[i], NULL);
+	for(i = 0; i<THREAD_NUM; i++){
+		pthread_create(&aa[i], 0, find_func, NULL);
 	}
-	id = trx_begin();
+	for(i=0; i<THREAD_NUM; i++){
+		pthread_join(aa[i], NULL);
+	}
+	//id = trx_begin();
 	//db_update(1,10,"adadfbv", id);
 /*	for(i = 0; i<1000; i++){
 		db_find(1,i,c,id);
 		printf("%s\n",c);
 	}*/
-	trx_commit(id);
-shutdown_db();
+	//trx_commit(id);
+//shutdown_db();
 //print_tree(1);
 
 }

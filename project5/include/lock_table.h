@@ -9,10 +9,18 @@
 
 typedef struct lock_t lock_t;
 typedef struct list list;
-#include "file.h"
+
 #include "transaction.h"
+#include "file.h"
+
+
+
 
 #define TABLE_SIZE 431
+
+#define ACQUIRED 0
+#define NEED_TO_WAIT 1
+#define DEADLOCK 2
 
 
 
@@ -26,6 +34,8 @@ struct lock_t {
 	char *stored;
 	pagenum_t pagenum;
 	bool get;
+	bool get_mutex;
+	bool prev_lock_aborted;
 	int lock_mode;
 	int trx_id;
 	lock_t *trx_next;
@@ -49,8 +59,9 @@ pthread_mutex_t lock_table_latch;
 
 /* APIs for lock table */
 int init_lock_table();
-lock_t* lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode);
-int lock_release(lock_t* lock_obj);
+int lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode, lock_t* ret_lock, trxList* t);
+int lock_release(lock_t* lock_obj, int aborted);
+void lock_wait(lock_t* locK_obj);
 
 lock_t* lock_make_node();
 list* make_list(int table_id, int64_t key);
