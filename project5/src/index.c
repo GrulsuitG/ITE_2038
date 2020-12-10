@@ -551,6 +551,9 @@ int find_record(int table_id, int64_t key, int trx_id, int lock_mode ,trxList *t
 		else if(ret == NEED_TO_WAIT){
 			pagenum =page->mypage;
 			buf_return_page(table_id, page->mypage, false, page->index);
+			pthread_mutex_lock(trx_manager_latch);
+			pthread_mutex_lock(t->mutex);
+			pthread_mutex_unlock(trx_manager_latch);
 			lock_wait(lock_obj,t);
 			
 			page = buf_read_page(table_id, pagenum);
