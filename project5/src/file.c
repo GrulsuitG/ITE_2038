@@ -433,7 +433,7 @@ page_t* init_page(){
 	if(page->record == NULL){
 		perror("page record creation for init");
 		exit(EXIT_FAILURE);
-	}
+	}/*
 	for(i=0; i<LEAF_ORDER-1; i++){
 		page->record[i] = (record*)malloc(sizeof(record));
 	    if(page->record[i] == NULL){
@@ -449,9 +449,9 @@ page_t* init_page(){
             perror("page record creation for init.");
             exit(EXIT_FAILURE);
         }
-        memset(page->record[i]->value, 0, sizeof(page->record[i]->value));
+        //memset(page->record[i]->value, 0, sizeof(page->record[i]->value));
     }	
-	
+	*/
 	page->pagenum = malloc(sizeof(pagenum_t) * (INTERNAL_ORDER -1));
     if(page->pagenum == NULL){
     	perror("page info creation for init.");
@@ -462,10 +462,12 @@ page_t* init_page(){
 }
 
 void free_page(page_t *page){
-	
+	int i ;
+	record * r;
+	free(page->pagenum);
 	free(page->record);
 	
-	free(page->pagenum);
+	
 	free(page->keys);
 	free(page);
 

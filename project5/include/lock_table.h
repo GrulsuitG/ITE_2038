@@ -13,7 +13,8 @@ typedef struct list list;
 #include "transaction.h"
 #include "file.h"
 
-
+#define SHARED 0
+#define EXCLUSIVE 1
 
 
 #define TABLE_SIZE 431
@@ -45,6 +46,7 @@ struct list{
 
 	int table_id;
 	int64_t key;
+	int lock_num;
 	pthread_mutex_t *mutex;
 	
 	list *link;
@@ -55,7 +57,7 @@ struct list{
 
 list *lock_table[TABLE_SIZE];
 
-pthread_mutex_t lock_table_latch;
+pthread_mutex_t *lock_table_latch;
 
 /* APIs for lock table */
 int init_lock_table();

@@ -15,6 +15,7 @@ int init_db(int num_buf){
 	unique_id = 1;
 	init_trx();
 	init_lock_table();
+	fp = fopen("log.txt", "w");
 	return 0;
 }
 
@@ -87,7 +88,14 @@ int db_delete(int table_id, int64_t key){
 int db_find(int table_id, int64_t key, char *ret_val, int trx_id){
   	trxList* t;
 	record *r;
-	lock_t *lock;
+	pagenum_t root;
+
+  /*	r= find(table_id, &root, key);
+  	if(r == NULL){ 
+        return -1;
+    }
+    strncpy(ret_val, r->value, VALUE_SIZE);
+	return 0;*/
   	if(!init){
 		trx_abort(trx_id);
 		return -1;
@@ -108,20 +116,15 @@ int db_find(int table_id, int64_t key, char *ret_val, int trx_id){
 		return -1;
 	}
 	
-	r= find_record(table_id, key, trx_id, t, lock);
+	r= find_record(table_id, key, trx_id, SHARED ,t, ret_val);
 	if(r == NULL){
 		trx_abort(trx_id);
 		return -1;
 	}
-	else{
-		strncpy(ret_val, r->value, VALUE_SIZE);
-		return 0;
-	}
-	
+	return 0;
 }
 int db_update(int table_id, int64_t key, char *values, int trx_id){
 	trxList* t;
-	lock_t* lock;
 	record *r;
   	if(!init){
 		trx_abort(trx_id);
@@ -143,13 +146,12 @@ int db_update(int table_id, int64_t key, char *values, int trx_id){
 		return -1;
 	}
 	
-	r= find_record(table_id, key, trx_id, t, lock);
+	r= find_record(table_id, key, trx_id, EXCLUSIVE,t, values);
+	
 	if(r == NULL){
-		trx_abort(trx_id);
 		return -1;
 	}
 	else{
-		strncpy(lock->stored, r->value, VALUE_SIZE);
 		strncpy(r->value, values, VALUE_SIZE);
 		return 0;
 	}

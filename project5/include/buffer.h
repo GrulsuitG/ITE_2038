@@ -5,6 +5,7 @@
 #include<stdbool.h>
 #include<pthread.h>
 #include"file.h"
+#include"transaction.h"
 
 
 typedef struct buf_ctrl_block{
@@ -21,7 +22,7 @@ typedef struct buf_ctrl_block{
 	struct buf_ctrl_block *prev;
 }buf_ctrl_block;
 
-pthread_mutex_t buffer_manager_latch;
+pthread_mutex_t *buffer_manager_latch;
 buf_ctrl_block **block;
 int buf_size;
 
@@ -33,9 +34,9 @@ int buf_init(int num_buf);
 int buf_open(int table_id, char* filename);
 
 page_t* buf_read_page(int table_id, pagenum_t pagenum);
-void buf_return_page(int table_id, pagenum_t pagenum,bool is_dirty);
+void buf_return_page(int table_id, pagenum_t pagenum,bool is_dirty, int index);
 page_t* buf_alloc_page(int table_id);
-void buf_free_page(int table_id, pagenum_t pagenum);
+void buf_free_page(int table_id, pagenum_t pagenum, int index);
 
 int find_empty(int table_id, pagenum_t pagenum);
 int find_place(int iable_id, pagenum_t pagenum);

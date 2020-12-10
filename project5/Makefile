@@ -30,7 +30,7 @@ CFLAGS+= -g -fPIC -I $(INC)
 TARGET=test
 
 all: $(TARGET)
-	rm DATA00.db
+	rm DATA00.db log.txt
 
 $(TARGET): $(TARGET_OBJ) $(STATIC_LIB)
 	$(CC) $(CFLAGS) $< -o $@ -L $(LIBS) -lbpt -lpthread

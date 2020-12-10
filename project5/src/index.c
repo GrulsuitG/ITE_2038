@@ -460,11 +460,11 @@ int find_range( node * root, int64_t key_start, int64_t key_end, bool verbose,
  * Returns the leaf containing the given key.
  */
 page_t* find_leaf(int table_id, pagenum_t root, int64_t key) {
-	 int i,num;
-    page_t *page = buf_read_page(table_id, root);
-    while(!page->is_leaf){
+	int i,num;
+   	page_t *page = buf_read_page(table_id, root);
+	while(!page->is_leaf){
+		buf_return_page(table_id, page->mypage, false, page->index);
 		num = page->num_keys;
-		buf_return_page(table_id, page->mypage, false);
 		if(key<page->keys[0]){
 			page =buf_read_page(table_id, page->pointer);
 			continue;
@@ -493,12 +493,12 @@ record* find(int table_id, pagenum_t *root, int64_t key) {
 	page_t *header = buf_read_page(table_id, 0);
 	page_t *page;
 	*root= header->rootPageNum;
-	buf_return_page(table_id, 0, false);
+	buf_return_page(table_id, 0, false, header->index);
 	if(*root == 0){
 		return NULL;
 		}
     page = find_leaf(table_id, *root, key);
-	buf_return_page(table_id, page->mypage, false);
+	buf_return_page(table_id, page->mypage, false, page->index);
     for (i = 0; i < page->num_keys; i++)
         if (page->keys[i] == key) break;
     if (i == page->num_keys){
@@ -510,12 +510,13 @@ record* find(int table_id, pagenum_t *root, int64_t key) {
 	return NULL;
 }
 
-record* find_record(int table_id, int64_t key, int trx_id, trxList *t, lock_t *lock_obj){
+record* find_record(int table_id, int64_t key, int trx_id, int lock_mode ,trxList *t, char* str){
 	int ret, i = 0;
 	page_t *header = buf_read_page(table_id, 0);
 	page_t *page;
 	pagenum_t pagenum;
-	buf_return_page(table_id, 0, false);
+	lock_t * lock_obj = lock_make_node();
+	buf_return_page(table_id, 0, false, header->index);
 	if(header->rootPageNum == 0){
 		return NULL;
 	}
@@ -523,25 +524,38 @@ record* find_record(int table_id, int64_t key, int trx_id, trxList *t, lock_t *l
 	pagenum =page->mypage;
     for (i = 0; i < page->num_keys; i++)
         if (page->keys[i] == key) break;
+        
     if (i == page->num_keys){
-    	buf_return_page(table_id, page->mypage, false);
+    	buf_return_page(table_id, page->mypage, false, page->index);
         return NULL;
     }
     else{
-    	ret = lock_acquire(table_id, key, trx_id, 0 ,lock_obj, t);
-   	ret = 0;
+    	ret = lock_acquire(table_id, key, trx_id, lock_mode, lock_obj, t);
 		if(ret == ACQUIRED){
-			buf_return_page(table_id, page->mypage, false);
+			if(lock_mode == EXCLUSIVE){
+				strncpy(lock_obj->stored, page->record[i]->value, VALUE_SIZE);
+				strncpy(page->record[i]->value, str, VALUE_SIZE);
+				buf_return_page(table_id, page->mypage, true, page->index);
+			}
+			else if(lock_mode == SHARED){
+				strncpy(str, page->record[i]->value, VALUE_SIZE);
+				buf_return_page(table_id, page->mypage, false, page->index);
+			}
+			
 			return page->record[i];
 		}
 		else if(ret == NEED_TO_WAIT){
-			buf_return_page(table_id, page->mypage, false);
+			buf_return_page(table_id, page->mypage, false, page->index);
 			lock_wait(lock_obj);
 			return NULL;
 		}
 		else if(ret == DEADLOCK){
-			buf_return_page(table_id, page->mypage, false);
+			buf_return_page(table_id, page->mypage, false, page->index);
 			return NULL;
+		}
+		else{
+			perror("error");
+			exit(EXIT_FAILURE);
 		}
     }
 
@@ -698,7 +712,7 @@ void insert_into_leaf(int table_id,  page_t * leaf, int64_t key, record * pointe
     leaf->keys[insertion_point] = key;
     leaf->record[insertion_point] = pointer;
     leaf->num_keys++;
-	buf_return_page(table_id, leaf->mypage,true);
+	buf_return_page(table_id, leaf->mypage,true, leaf->index);
 }
 
 
@@ -708,8 +722,9 @@ void insert_into_leaf(int table_id,  page_t * leaf, int64_t key, record * pointe
  * in half.
  */
 pagenum_t insert_into_leaf_after_splitting(int table_id, pagenum_t root, page_t * leaf, int64_t key, record * pointer) {
-
+	
     page_t * new_leaf = buf_alloc_page(table_id);
+  
     int * temp_keys;
 	record ** temp_pointers;
     int insertion_index, split, i, j, order;
@@ -795,8 +810,8 @@ void insert_into_node(int table_id, page_t *p, int left_index,
     p->keys[left_index+1] = key;
     p->num_keys++;
 
-	buf_return_page(table_id, p->mypage, true);
-	buf_return_page(table_id, right->mypage, true);
+	buf_return_page(table_id, p->mypage, true, p->index);
+	buf_return_page(table_id, right->mypage, true, right->index);
 }
 
 
@@ -878,11 +893,11 @@ pagenum_t insert_into_node_after_splitting(int table_id, pagenum_t root, page_t 
     new_page->parentPageNum = old_page->parentPageNum;
 	child = buf_read_page(table_id, new_page->pointer);
 	child->parentPageNum = new_page->mypage;
-	buf_return_page(table_id, child->mypage, true);
+	buf_return_page(table_id, child->mypage, true, child->index);
 	for (i = 0; i < new_page->num_keys; i++) {
         child = buf_read_page(table_id, new_page->pagenum[i]);
         child->parentPageNum = new_page->mypage;
-		buf_return_page(table_id, child->mypage, true);
+		buf_return_page(table_id, child->mypage, true, child->index);
 		
     }
     /* Insert a new key into the parent of the two
@@ -922,14 +937,14 @@ pagenum_t insert_into_parent(int table_id, pagenum_t root,page_t *left, int64_t 
 
     if (parent->num_keys < (INTERNAL_ORDER-1)){
     	insert_into_node(table_id, parent, left_index, key, right);
-		buf_return_page(table_id, left->mypage, true);
+		buf_return_page(table_id, left->mypage, true, left->index);
 		return root;
 	}
     /* Harder case:  split a node in order 
      * to preserve the B+ tree properties.
      */
-	buf_return_page(table_id, left->mypage, true);
-	buf_return_page(table_id, right->mypage, true);
+	buf_return_page(table_id, left->mypage, true, left->index);
+	buf_return_page(table_id, right->mypage, true, left->index);
     return insert_into_node_after_splitting(table_id, root, parent, left_index, key, right);
 	
 }
@@ -951,9 +966,9 @@ pagenum_t insert_into_new_root(int table_id, page_t *left, int64_t key, page_t *
     left->parentPageNum = root->mypage;
     right->parentPageNum = root->mypage;
 
-	buf_return_page(table_id, left->mypage, true);
-	buf_return_page(table_id, right->mypage, true);
-	buf_return_page(table_id, root->mypage, true);
+	buf_return_page(table_id, left->mypage, true, left->index);
+	buf_return_page(table_id, right->mypage, true, right->index);
+	buf_return_page(table_id, root->mypage, true, root->index);
     return root->mypage;
 }
 
@@ -972,7 +987,7 @@ pagenum_t start_new_tree(int table_id, int64_t key, record * pointer) {
 	page->is_leaf = 1;
     page->num_keys =1;
 	
-	buf_return_page(table_id, page->mypage, true);	
+	buf_return_page(table_id, page->mypage, true, page->index);	
 	return page->mypage;
 }
 
@@ -1030,7 +1045,7 @@ pagenum_t start_new_tree(int table_id, int64_t key, record * pointer) {
 	if(root_page != 0 && root != root_page){
 		header = buf_read_page(table_id, 0);
 		header->rootPageNum = root_page;
-		buf_return_page(table_id, 0,true);
+		buf_return_page(table_id, 0,true, header->index);
 	}
 
 }
@@ -1058,12 +1073,12 @@ int get_neighbor_index(int table_id, page_t *p ) {
      */
 	parent = buf_read_page(table_id, p->parentPageNum);
 	if(parent->pointer == p->mypage){
-		buf_return_page(table_id, parent->mypage, false);
+		buf_return_page(table_id, parent->mypage, false, parent->index);
 		return -1;
 	}
     for (i = 0; i < parent->num_keys; i++){
         if (parent->pagenum[i] == p->mypage){
-			buf_return_page(table_id, parent->mypage, false);
+			buf_return_page(table_id, parent->mypage, false, parent->index);
         	return i;
 		}
 	}
@@ -1135,7 +1150,7 @@ pagenum_t adjust_root(int table_id, page_t *root) {
      * so nothing to be done.
      */
     if (root->num_keys > 0){
-		buf_return_page(table_id, root->mypage, true);
+		buf_return_page(table_id, root->mypage, true, root->index);
 
 		return root->mypage;
 	}
@@ -1149,8 +1164,8 @@ pagenum_t adjust_root(int table_id, page_t *root) {
 		new_root = buf_read_page(table_id, root->pointer);
         new_root->parentPageNum = 0;
 
-		buf_free_page(table_id, root->mypage);
-		buf_return_page(table_id, new_root->mypage, true);
+		buf_free_page(table_id, root->mypage, root->index);
+		buf_return_page(table_id, new_root->mypage, true, new_root->index);
 		return new_root->mypage;
     }
 
@@ -1158,7 +1173,7 @@ pagenum_t adjust_root(int table_id, page_t *root) {
     // then the whole tree is empty.
 
     else{
-     	buf_free_page(table_id, root->mypage);
+     	buf_free_page(table_id, root->mypage, root->index);
 	 	return 0;
 	}
 }
@@ -1200,11 +1215,11 @@ pagenum_t coalesce_nodes(int table_id, pagenum_t root, page_t *p, page_t* parent
 	neighbor->num_keys++;
 	child = buf_read_page(table_id, p->pointer);
 	child->parentPageNum = neighbor->mypage;
-	buf_return_page(table_id, child->mypage, true);
+	buf_return_page(table_id, child->mypage, true, child->index);
 	
-	buf_return_page(table_id, neighbor->mypage, true);
+	buf_return_page(table_id, neighbor->mypage, true, neighbor->index);
 	pagenum = p->mypage;
-	buf_free_page(table_id, p->mypage);
+	buf_free_page(table_id, p->mypage, p->index);
 	
 	return delete_entry(table_id, root, parent, k_prime, pagenum);
 }
@@ -1268,10 +1283,10 @@ pagenum_t redistribute_nodes(int table_id, pagenum_t root, page_t *p, page_t* pa
     p->num_keys++;
     neighbor->num_keys--;
 
-	buf_return_page(table_id, p->mypage,true);
-	buf_return_page(table_id, neighbor->mypage, true);
-	buf_return_page(table_id, tmp->mypage, true);
-	buf_return_page(table_id, parent->mypage, true);
+	buf_return_page(table_id, p->mypage,true, p->index);
+	buf_return_page(table_id, neighbor->mypage, true, neighbor->index);
+	buf_return_page(table_id, tmp->mypage, true, tmp->index);
+	buf_return_page(table_id, parent->mypage, true, parent->index);
 
     return root;
 }
@@ -1315,7 +1330,7 @@ pagenum_t delete_entry(int table_id,  pagenum_t root, page_t *p, int64_t key, pa
 
     if (p->num_keys > 0){
 //		printf("b");
-    	buf_return_page(table_id, p->mypage, true);
+    	buf_return_page(table_id, p->mypage, true, p->index);
 		return root;
 	}
 
@@ -1345,13 +1360,13 @@ pagenum_t delete_entry(int table_id,  pagenum_t root, page_t *p, int64_t key, pa
 	if(p->is_leaf){
 		if(neighbor_index != -1){
 			neighbor->pointer = p->pointer;
-			buf_return_page(table_id, neighbor->mypage, true);
+			buf_return_page(table_id, neighbor->mypage, true, neighbor->index);
 		}
 		else
-			buf_return_page(table_id, neighbor->mypage, false);
+			buf_return_page(table_id, neighbor->mypage, false, neighbor->index);
 			
 		num = p->mypage;
-		buf_free_page(table_id, p->mypage);
+		buf_free_page(table_id, p->mypage, p->index);
 //		printf("d");
 		return delete_entry(table_id, root, parent,k_prime, num);
 	}
@@ -1385,7 +1400,7 @@ void delete(int table_id, pagenum_t root, int64_t key) {
 			//printf("root_page : %ld\n", root_page);
 			header =buf_read_page(table_id, 0);
 			header->rootPageNum = root_page;
-			buf_return_page(table_id, 0, true);
+			buf_return_page(table_id, 0, true, header->index);
 		}
     }
 }

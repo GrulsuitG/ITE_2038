@@ -14,7 +14,8 @@ typedef struct trxList trxList;
 int global_trx_id;
 int **graph;
 bool cycle;
-pthread_mutex_t trx_manager_latch;
+pthread_mutex_t *trx_manager_latch;
+FILE *fp;
 
 struct trxList{
 	unsigned id;

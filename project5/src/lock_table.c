@@ -1,36 +1,32 @@
 #include "lock_table.h"
 
 int init_lock_table() {
-	pthread_mutex_init(&lock_table_latch,0);
-
+	lock_table_latch = (pthread_mutex_t*) malloc(sizeof(pthread_mutex_t));
+	pthread_mutex_init(lock_table_latch,0);
 	return 0;
 }
 
 int lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode, lock_t* ret_lock, trxList* t) {
-	pthread_mutex_lock(&lock_table_latch);
-	ret_lock = lock_make_node();
 	
 	lock_t *tmp;
-	list *l;
-	l = hash_find(table_id, key, lock_table);
+	list *l = hash_find(table_id, key, lock_table);
 	if (l == NULL){
 		l = hash_add(table_id, key, lock_table);
 	}
 	ret_lock->pointer = l;
 	ret_lock->lock_mode = lock_mode;
 	ret_lock->trx_id = trx_id;
-	
+	l->lock_num++;
 	ret_lock->trx_next = t->lock;
 	t->lock = ret_lock;
 	
 	//lock 오브젝트를 처음 다는 경우
-	if(l->head == NULL){
+	if(l->lock_num == 1){
 		l->head = ret_lock;
 		l->tail = ret_lock;
 		pthread_mutex_lock(l->mutex);
 		ret_lock->get_mutex = true;
 		ret_lock->get = true;
-		pthread_mutex_unlock(&lock_table_latch);
 		return ACQUIRED;
 	}
 	//앞에 달린 lock오브젝트가 있는 경우
@@ -41,77 +37,70 @@ int lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode, lock_t* r
 		ret_lock->prev = tmp;
 		//앞 lock 오브젝트의 trx_id 가 자기와 같은 경우
 		if(tmp->trx_id == trx_id){
-			if(tmp->lock_mode == 0 && lock_mode == 1){
+			if(tmp->lock_mode == SHARED && lock_mode == EXCLUSIVE){
 				//othertrx_lock(0) -> my_prev_lock(0) -> my_cur_lock(1)
 				if(tmp->prev){
-					printf("a");
-					pthread_mutex_unlock(&lock_table_latch);
 					return NEED_TO_WAIT;
 				}
-				// othertrx_lock 이 없으면 바로 mutex 획득 가능
 				
 			}
 			// lock_mode 를 exclusive로 업그레이드 해서 List에 달아줌.
-			else if(tmp->lock_mode ==1 && lock_mode == 0){
-				ret_lock->lock_mode =1;
+			else if(tmp->lock_mode == EXCLUSIVE && lock_mode == SHARED){
+				ret_lock->lock_mode = EXCLUSIVE;
 				
 			}
+			pthread_mutex_unlock(l->mutex);
+			pthread_mutex_lock(l->mutex);
 			ret_lock->get = true;
-			pthread_mutex_unlock(&lock_table_latch);
 			return ACQUIRED;
 		}
 		//앞 lock 오브젝트랑 trx_id가 다른 경우
 		else {
-			if(detection(trx_id, tmp->trx_id)){
-				pthread_mutex_unlock(&lock_table_latch);
-				return DEADLOCK;
-			}
+			//if(detection(trx_id, tmp->trx_id)){
+				//return DEADLOCK;
+			//}
 			
 			//ret_lock의 앞에 달린 lock오브젝트가 shared 나도 shared
-			if(tmp->lock_mode == 0 && lock_mode == 0){
+			if(tmp->lock_mode == SHARED && lock_mode == SHARED){
 					if(tmp->get == false){
-						pthread_mutex_unlock(&lock_table_latch);
 						return NEED_TO_WAIT;
 					}
 					if(tmp->get == true){
+						pthread_mutex_unlock(l->mutex);
+						pthread_mutex_lock(l->mutex);
 						ret_lock->get = true;
-						pthread_mutex_unlock(&lock_table_latch);
 						return ACQUIRED;
 					}
 			}
 			//앞에 달린 lock이 shared 내가 exclusive
- 			else if(tmp->lock_mode ==0 && lock_mode == 1){
-  				pthread_mutex_unlock(&lock_table_latch);
+ 			else if(tmp->lock_mode == SHARED && lock_mode == EXCLUSIVE){
   				return NEED_TO_WAIT;
  			}
 			//앞에 달린 Lock이 exclusive 인 경우
-			else if(tmp->lock_mode ==1){
-				pthread_mutex_unlock(&lock_table_latch);
+			else if(tmp->lock_mode == EXCLUSIVE){
   				return NEED_TO_WAIT;
 			}
 		}
-		
 	}
-	pthread_mutex_unlock(&lock_table_latch);
-	return ACQUIRED;
-	
+	printf("error\n");
+	return -1;
 }
 
 int lock_release(lock_t* lock_obj, int aborted) {
-	pthread_mutex_lock(&lock_table_latch);
 	list *l = lock_obj->pointer;
 	lock_t *tmp;
 	
 	
 	// 1개 인경우
-	if(l->tail == l->head){
+	if(l->lock_num == 1){
 		l->head = NULL;
 		l->tail = NULL;
 		
 	}
 	// 마지막인경우
-	else if(l->tail == lock_obj && l->head != lock_obj){
+	else if(l->tail == lock_obj ){
 		l->tail = lock_obj->prev;
+		lock_obj->prev->next = NULL;
 	}
 	// 여러개 중 list의 가장 첫번째 인 경우
 	else if(l->head == lock_obj){
@@ -137,16 +126,16 @@ int lock_release(lock_t* lock_obj, int aborted) {
 	if(lock_obj->get_mutex)
 		pthread_mutex_unlock(l->mutex);
 	
- 	
-	//free(lock_obj->cond);
+ 	l->lock_num--;
+	pthread_cond_destroy(lock_obj->cond);
+	free(lock_obj->cond);
 	free(lock_obj->stored);
 	free(lock_obj);
-	pthread_mutex_unlock(&lock_table_latch);
 	return 0;
 }
 
 void lock_wait(lock_t *lock_obj){
-	
+	return ;
 }
 
 lock_t* lock_make_node(){
@@ -158,7 +147,7 @@ lock_t* lock_make_node(){
 	node->stored = (char*) malloc(VALUE_SIZE);
 	node->cond = (pthread_cond_t*)malloc(sizeof(pthread_cond_t));
 	pthread_cond_init(node->cond,0);
-	node->get =false;
+	node->get = false;
 	node->prev_lock_aborted = false;
 	node->pointer = NULL;
 	node->next = NULL;
@@ -174,13 +163,14 @@ list* make_list(int table_id, int64_t key){
 	}
 	l->table_id = table_id;
 	l->key = key;
+	l->lock_num =0;
 	l->mutex = (pthread_mutex_t*) malloc(sizeof(pthread_mutex_t));
 	pthread_mutex_init(l->mutex, 0);
 	l->link = NULL;
 	return l;
 }
 int hash_function(int table_id, int64_t key){
-	return (table_id+(5*key)) % TABLE_SIZE;
+	return (table_id+(9*key)) % TABLE_SIZE;
 }
 
 list* hash_add(const int table_id, const int64_t key, list *ht[]){
