@@ -37,10 +37,11 @@ int trx_commit(int trx_id){
 	
 	l = t->lock;
 	while(l != NULL){
+		
 		temp = l;
 		l = l->trx_next;
 		pthread_mutex_lock(lock_table_latch);
-		lock_release(temp, 0);
+		lock_release(temp);
 		pthread_mutex_unlock(lock_table_latch);
 	}
 
@@ -55,6 +56,8 @@ int trx_commit(int trx_id){
 		}
 		templist->link = t->link;
 	}
+	pthread_mutex_destroy(t->mutex);
+	free(t->mutex);
 	free(t);
 	fprintf(fp, "%d commit\n", trx_id);
 	pthread_mutex_unlock(trx_manager_latch);

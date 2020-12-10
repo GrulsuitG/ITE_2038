@@ -47,12 +47,12 @@ page_t* buf_read_page(int table_id, pagenum_t pagenum){
 	//	buf_clear(index);
 		file_read_page(table_id, pagenum, block[index]->frame);
 	}
-	fprintf(fp,"mutex lock ");
+	//fprintf(fp,"mutex lock ");
 	
 	pthread_mutex_lock(block[index]->page_latch);
 	
 	
-	fprintf(fp, "%d\n", index);
+	//fprintf(fp, "%d\n", index);
 	
 	block[index]->frame->index = index;
 	block[index]->table_id = table_id;
@@ -71,10 +71,10 @@ void buf_return_page(int table_id, pagenum_t pagenum,  bool is_dirty, int index)
 		block[index] -> is_dirty = is_dirty;
 	block[index] -> ref_bit = true;
 	head = block[index];
-	fprintf(fp,"mutex unlock ");
+	//fprintf(fp,"mutex unlock ");
 	pthread_mutex_unlock(buffer_manager_latch);
 	pthread_mutex_unlock(block[index]->page_latch);
-	fprintf(fp, "%d\n", index);
+	//fprintf(fp, "%d\n", index);
 	
 	return;
 	//printf("return page %ld\n", pagenum);
@@ -86,9 +86,9 @@ page_t* buf_alloc_page(int table_id){
 	if(index == -1){
 		index = find_empty(table_id, pagenum);
 	}
-	fprintf(fp,"mutex lock ");
+	//fprintf(fp,"mutex lock ");
 	pthread_mutex_lock(block[index]->page_latch);
-	fprintf(fp, "%d\n", index);
+	//fprintf(fp, "%d\n", index);
 	
 	buf_clear(index);
 	block[index]->frame->mypage =pagenum;

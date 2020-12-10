@@ -10,6 +10,8 @@ typedef struct trxList trxList;
 #include "buffer.h"
 #define TRX_TABLE_SIZE 4321
 
+#define SUCCESS 0
+#define FAIL 1
 
 int global_trx_id;
 int **graph;

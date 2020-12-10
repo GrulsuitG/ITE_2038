@@ -36,7 +36,7 @@ struct lock_t {
 	pagenum_t pagenum;
 	bool get;
 	bool get_mutex;
-	bool prev_lock_aborted;
+	bool run;
 	int lock_mode;
 	int trx_id;
 	lock_t *trx_next;
@@ -62,8 +62,8 @@ pthread_mutex_t *lock_table_latch;
 /* APIs for lock table */
 int init_lock_table();
 int lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode, lock_t* ret_lock, trxList* t);
-int lock_release(lock_t* lock_obj, int aborted);
-void lock_wait(lock_t* locK_obj);
+int lock_release(lock_t* lock_obj);
+void lock_wait(lock_t* locK_obj, trxList* t);
 
 lock_t* lock_make_node();
 list* make_list(int table_id, int64_t key);

@@ -510,7 +510,7 @@ record* find(int table_id, pagenum_t *root, int64_t key) {
 	return NULL;
 }
 
-record* find_record(int table_id, int64_t key, int trx_id, int lock_mode ,trxList *t, char* str){
+int find_record(int table_id, int64_t key, int trx_id, int lock_mode ,trxList *t, char* str){
 	int ret, i = 0;
 	page_t *header = buf_read_page(table_id, 0);
 	page_t *page;
@@ -518,19 +518,22 @@ record* find_record(int table_id, int64_t key, int trx_id, int lock_mode ,trxLis
 	lock_t * lock_obj = lock_make_node();
 	buf_return_page(table_id, 0, false, header->index);
 	if(header->rootPageNum == 0){
-		return NULL;
+		return FAIL;
 	}
     page = find_leaf(table_id, header->rootPageNum, key);
-	pagenum =page->mypage;
+	
     for (i = 0; i < page->num_keys; i++)
         if (page->keys[i] == key) break;
         
     if (i == page->num_keys){
     	buf_return_page(table_id, page->mypage, false, page->index);
-        return NULL;
+        return FAIL;
     }
     else{
+    	pthread_mutex_lock(lock_table_latch);
     	ret = lock_acquire(table_id, key, trx_id, lock_mode, lock_obj, t);
+    	pthread_mutex_unlock(lock_table_latch);
+		
 		if(ret == ACQUIRED){
 			if(lock_mode == EXCLUSIVE){
 				strncpy(lock_obj->stored, page->record[i]->value, VALUE_SIZE);
@@ -542,17 +545,33 @@ record* find_record(int table_id, int64_t key, int trx_id, int lock_mode ,trxLis
 				buf_return_page(table_id, page->mypage, false, page->index);
 			}
 			
-			return page->record[i];
+			return SUCCESS;
 		}
+		
 		else if(ret == NEED_TO_WAIT){
+			pagenum =page->mypage;
 			buf_return_page(table_id, page->mypage, false, page->index);
-			lock_wait(lock_obj);
-			return NULL;
+			lock_wait(lock_obj,t);
+			
+			page = buf_read_page(table_id, pagenum);
+			if(lock_mode == EXCLUSIVE){
+				strncpy(lock_obj->stored, page->record[i]->value, VALUE_SIZE);
+				strncpy(page->record[i]->value, str, VALUE_SIZE);
+				buf_return_page(table_id, page->mypage, true, page->index);
+			}
+			else if(lock_mode == SHARED){
+				strncpy(str, page->record[i]->value, VALUE_SIZE);
+				buf_return_page(table_id, page->mypage, false, page->index);
+			}
+			
+			return SUCCESS;
 		}
+		
 		else if(ret == DEADLOCK){
 			buf_return_page(table_id, page->mypage, false, page->index);
-			return NULL;
+			return FAIL;
 		}
+		
 		else{
 			perror("error");
 			exit(EXIT_FAILURE);
@@ -1329,7 +1348,6 @@ pagenum_t delete_entry(int table_id,  pagenum_t root, page_t *p, int64_t key, pa
      */
 
     if (p->num_keys > 0){
-//		printf("b");
     	buf_return_page(table_id, p->mypage, true, p->index);
 		return root;
 	}

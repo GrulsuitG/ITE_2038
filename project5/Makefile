@@ -30,7 +30,6 @@ CFLAGS+= -g -fPIC -I $(INC)
 TARGET=test
 
 all: $(TARGET)
-	rm DATA00.db log.txt
 
 $(TARGET): $(TARGET_OBJ) $(STATIC_LIB)
 	$(CC) $(CFLAGS) $< -o $@ -L $(LIBS) -lbpt -lpthread
@@ -42,6 +41,8 @@ $(TARGET): $(TARGET_OBJ) $(STATIC_LIB)
 clean:
 	rm $(TARGET) $(TARGET_OBJ) $(OBJS_FOR_LIB) $(LIBS)*
 
+d:
+	rm DATA00.db log.txt
 
 $(STATIC_LIB): $(OBJS_FOR_LIB)
 	ar cr $@ $^

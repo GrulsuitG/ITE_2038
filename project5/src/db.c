@@ -87,15 +87,9 @@ int db_delete(int table_id, int64_t key){
 
 int db_find(int table_id, int64_t key, char *ret_val, int trx_id){
   	trxList* t;
-	record *r;
-	pagenum_t root;
+	int result;
+	
 
-  /*	r= find(table_id, &root, key);
-  	if(r == NULL){ 
-        return -1;
-    }
-    strncpy(ret_val, r->value, VALUE_SIZE);
-	return 0;*/
   	if(!init){
 		trx_abort(trx_id);
 		return -1;
@@ -116,8 +110,8 @@ int db_find(int table_id, int64_t key, char *ret_val, int trx_id){
 		return -1;
 	}
 	
-	r= find_record(table_id, key, trx_id, SHARED ,t, ret_val);
-	if(r == NULL){
+	result= find_record(table_id, key, trx_id, SHARED ,t, ret_val);
+	if(result == FAIL){
 		trx_abort(trx_id);
 		return -1;
 	}
@@ -125,7 +119,7 @@ int db_find(int table_id, int64_t key, char *ret_val, int trx_id){
 }
 int db_update(int table_id, int64_t key, char *values, int trx_id){
 	trxList* t;
-	record *r;
+	int result;
   	if(!init){
 		trx_abort(trx_id);
 		return -1;
@@ -146,15 +140,14 @@ int db_update(int table_id, int64_t key, char *values, int trx_id){
 		return -1;
 	}
 	
-	r= find_record(table_id, key, trx_id, EXCLUSIVE,t, values);
-	
-	if(r == NULL){
+	result = find_record(table_id, key, trx_id, EXCLUSIVE, t, values);
+	if(result == FAIL){
+		trx_abort(trx_id);
 		return -1;
 	}
-	else{
-		strncpy(r->value, values, VALUE_SIZE);
-		return 0;
-	}
+
+	return 0;
+	
 }
 
 

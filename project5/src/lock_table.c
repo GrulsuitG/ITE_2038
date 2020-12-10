@@ -49,8 +49,7 @@ int lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode, lock_t* r
 				ret_lock->lock_mode = EXCLUSIVE;
 				
 			}
-			pthread_mutex_unlock(l->mutex);
-			pthread_mutex_lock(l->mutex);
+			
 			ret_lock->get = true;
 			return ACQUIRED;
 		}
@@ -66,8 +65,6 @@ int lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode, lock_t* r
 						return NEED_TO_WAIT;
 					}
 					if(tmp->get == true){
-						pthread_mutex_unlock(l->mutex);
-						pthread_mutex_lock(l->mutex);
 						ret_lock->get = true;
 						return ACQUIRED;
 					}
@@ -86,13 +83,14 @@ int lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode, lock_t* r
 	return -1;
 }
 
-int lock_release(lock_t* lock_obj, int aborted) {
+int lock_release(lock_t* lock_obj) {
 	list *l = lock_obj->pointer;
 	lock_t *tmp;
-	
+	trxList *t;
 	
 	// 1개 인경우
 	if(l->lock_num == 1){
+		//printf("a");
 		l->head = NULL;
 		l->tail = NULL;
 		
@@ -104,29 +102,36 @@ int lock_release(lock_t* lock_obj, int aborted) {
 	}
 	// 여러개 중 list의 가장 첫번째 인 경우
 	else if(l->head == lock_obj){
+		printf("c");
 		tmp = lock_obj->next;
 		l->head =tmp;
 		tmp->prev = NULL;
 		
-		if(aborted ==1){
-			tmp->prev_lock_aborted = true;
-		}
+		
+		tmp->run =true;
+		pthread_mutex_lock(trx_manager_latch);
+		t= trx_hash_find(tmp->trx_id, trx_table);
+		pthread_mutex_lock(t->mutex);
 		pthread_cond_signal(lock_obj->cond);
+		pthread_mutex_unlock(t->mutex);
+		pthread_mutex_unlock(trx_manager_latch);
 	}
 	// list 중간에 있는 경우
 	else{
+		tmp = lock_obj->next;
 		lock_obj->next->prev = lock_obj->prev;
 		lock_obj->prev->next = lock_obj->next;
-		if(aborted ==1){
-			lock_obj->next->prev_lock_aborted = true;
-		}
+		
+		pthread_mutex_lock(trx_manager_latch);
+		t= trx_hash_find(tmp->trx_id, trx_table);
+		pthread_mutex_lock(t->mutex);
 		pthread_cond_signal(lock_obj->cond);
+		pthread_mutex_unlock(t->mutex);
+		pthread_mutex_unlock(trx_manager_latch);
 	}
 	
-	if(lock_obj->get_mutex)
-		pthread_mutex_unlock(l->mutex);
-	
  	l->lock_num--;
+ 	pthread_mutex_unlock(l->mutex);
 	pthread_cond_destroy(lock_obj->cond);
 	free(lock_obj->cond);
 	free(lock_obj->stored);
@@ -134,7 +139,31 @@ int lock_release(lock_t* lock_obj, int aborted) {
 	return 0;
 }
 
-void lock_wait(lock_t *lock_obj){
+void lock_wait(lock_t *lock_obj, trxList* t){
+	list *l = lock_obj->pointer;
+	lock_t *tmp;
+	pthread_mutex_lock(trx_manager_latch);
+	pthread_mutex_lock(t->mutex);
+	pthread_mutex_unlock(trx_manager_latch);
+	
+	while(true){
+		tmp= lock_obj->prev;
+		if(tmp == NULL)
+			break;
+		pthread_cond_wait(tmp->cond, t->mutex);
+		if(lock_obj->run){
+			break;
+		}
+	}
+	//기다리는 락이 SHARED인 경우
+	if(lock_obj->lock_mode == SHARED){
+		if(lock_obj->next && lock_obj->next->lock_mode == SHARED){
+			lock_obj->next->run = true;
+			pthread_cond_signal(lock_obj->next->cond);
+		}
+	}
+	pthread_mutex_lock(l->mutex);
+	pthread_mutex_unlock(t->mutex);
 	return ;
 }
 
@@ -148,7 +177,7 @@ lock_t* lock_make_node(){
 	node->cond = (pthread_cond_t*)malloc(sizeof(pthread_cond_t));
 	pthread_cond_init(node->cond,0);
 	node->get = false;
-	node->prev_lock_aborted = false;
+	node->run = false;
 	node->pointer = NULL;
 	node->next = NULL;
 	node->prev = NULL;
