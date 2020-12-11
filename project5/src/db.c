@@ -99,13 +99,8 @@ int db_find(int table_id, int64_t key, char *ret_val, int trx_id){
 		trx_abort(trx_id);
 		return -1;
 	}
-	
 	t = trx_hash_find(trx_id, trx_table);
-	if(t == NULL){
-		trx_abort(trx_id);
-		return -1;
-	}
-	if(t->init == false){
+	if(t == NULL || t->init == false){
 		trx_abort(trx_id);
 		return -1;
 	}

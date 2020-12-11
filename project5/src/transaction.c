@@ -12,24 +12,24 @@ int trx_begin(){
 	t->id = global_trx_id++;
 	t->init = true;
 	//fprintf(fp, "begin %d\n", t->id);
+	pthread_mutex_lock(t->mutex);
 	pthread_mutex_unlock(trx_manager_latch);
 	return t->id;
 }
 
 int trx_commit(int trx_id){
-	
 	lock_t *l, *temp;
 	trxList * templist;
 	int index = trx_hash(trx_id);
+	//pthread_mutex_lock(trx_manager_latch);
 	trxList* t = trx_hash_find(trx_id, trx_table);
-	
+	//pthread_mutex_unlock(trx_manager_latch);
 	if(t == NULL || t->init == false){
 		//fprintf(fp, "%d list NULL\n", trx_id);
 		return 0;
 	}
 	
 	l = t->lock;
-	
 	while(l != NULL){
 		
 		temp = l;
@@ -39,7 +39,7 @@ int trx_commit(int trx_id){
 		pthread_mutex_unlock(lock_table_latch);
 	}
 
-	
+	pthread_mutex_unlock(t->mutex);
 	trx_hash_delete(index,t);
 	
 	//fprintf(fp, "%d commit\n", trx_id);

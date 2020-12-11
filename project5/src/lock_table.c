@@ -8,7 +8,7 @@ int init_lock_table() {
 
 int lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode, lock_t* ret_lock, trxList* t) {
 	
-	lock_t *tmp;
+	lock_t *prev_lock;
 	list *l = hash_find(table_id, key, lock_table);
 	if (l == NULL){
 		l = hash_add(table_id, key, lock_table);
@@ -30,22 +30,22 @@ int lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode, lock_t* r
 	}
 	//앞에 달린 lock오브젝트가 있는 경우
 	else{
-		tmp = l->tail;
+		prev_lock = l->tail;
 		l->tail = ret_lock;
-		tmp->next = ret_lock;
-		ret_lock->prev = tmp;
+		prev_lock->next = ret_lock;
+		ret_lock->prev = prev_lock;
 		//앞 lock 오브젝트의 trx_id 가 자기와 같은 경우
-		if(tmp->trx_id == trx_id){
-			if(tmp->lock_mode == SHARED && lock_mode == EXCLUSIVE){
+		if(prev_lock->trx_id == trx_id){
+			if(prev_lock->lock_mode == SHARED && lock_mode == EXCLUSIVE){
 				//othertrx_lock(0) -> my_prev_lock(0) -> my_cur_lock(1)
-				if(tmp->prev){
+				if(prev_lock->prev){
 					
 					return NEED_TO_WAIT;
 				}
 				
 			}
 			// lock_mode 를 exclusive로 업그레이드 해서 List에 달아줌.
-			else if(tmp->lock_mode == EXCLUSIVE && lock_mode == SHARED){
+			else if(prev_lock->lock_mode == EXCLUSIVE && lock_mode == SHARED){
 				ret_lock->lock_mode = EXCLUSIVE;
 				
 			}
@@ -55,28 +55,28 @@ int lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode, lock_t* r
 		}
 		//앞 lock 오브젝트랑 trx_id가 다른 경우
 		else {
-			//if(detection(trx_id, tmp->trx_id)){
+			//if(detection(trx_id, prev_lock->trx_id)){
 				//return DEADLOCK;
 			//}
 			
 			//ret_lock의 앞에 달린 lock오브젝트가 shared 나도 shared
-			if(tmp->lock_mode == SHARED && lock_mode == SHARED){
-					if(tmp->get == false){
+			if(prev_lock->lock_mode == SHARED && lock_mode == SHARED){
+					if(prev_lock->get == false){
 						
 						return NEED_TO_WAIT;
 					}
-					if(tmp->get == true){
+					if(prev_lock->get == true){
 						ret_lock->get = true;
 						return ACQUIRED;
 					}
 			}
 			//앞에 달린 lock이 shared 내가 exclusive
- 			else if(tmp->lock_mode == SHARED && lock_mode == EXCLUSIVE){
+ 			else if(prev_lock->lock_mode == SHARED && lock_mode == EXCLUSIVE){
   				
   				return NEED_TO_WAIT;
  			}
 			//앞에 달린 Lock이 exclusive 인 경우
-			else if(tmp->lock_mode == EXCLUSIVE){
+			else if(prev_lock->lock_mode == EXCLUSIVE){
   				
   				return NEED_TO_WAIT;
 			}
@@ -112,12 +112,12 @@ int lock_release(lock_t* lock_obj) {
 		
 		
 		next_lock->run =true;
-		
+		//pthread_mutex_lock(trx_manager_latch);
 		t= trx_hash_find(next_lock->trx_id, trx_table);
 		pthread_mutex_lock(t->mutex);
 		pthread_cond_signal(next_lock->cond);
 		pthread_mutex_unlock(t->mutex);
-		
+		//pthread_mutex_unlock(trx_manager_latch);
 	}
 	// list 중간에 있는 경우는 abort이거나 SHARED lock 이므로 기다리고 있는 다음 lock 오브젝트를 깨우지 않는다.
 	else{
@@ -129,10 +129,12 @@ int lock_release(lock_t* lock_obj) {
 		// 예외 prev(SHARED)(mutex get) ->lock_obj(EXCLUSIVE)(wait)->next(SHARED)(wait)
 		if(lock_obj->lock_mode == EXCLUSIVE){
 			if(prev_lock ->lock_mode == SHARED && prev_lock->get && next_lock->lock_mode == SHARED){
+				//pthread_mutex_lock(trx_manager_latch);
 				t= trx_hash_find(next_lock->trx_id, trx_table);
 				pthread_mutex_lock(t->mutex);
 				pthread_cond_signal(next_lock->cond);
 				pthread_mutex_unlock(t->mutex);
+				//pthread_mutex_unlock(trx_manager_latch);
 			}
 		}
 
@@ -151,9 +153,9 @@ void lock_wait(lock_t *lock_obj, trxList* t){
 	list *l = lock_obj->pointer;
 	lock_t *next_lock, *prev_lock;
 	
-	pthread_mutex_lock(trx_manager_latch);
-	pthread_mutex_lock(t->mutex);
-	pthread_mutex_unlock(trx_manager_latch);
+	//pthread_mutex_lock(trx_manager_latch);
+	//pthread_mutex_lock(t->mutex);
+	//pthread_mutex_unlock(trx_manager_latch);
 	
 	//othertrx_lock(SHARED) -> my_prev_lock(SHARED) -> my_cur_lock(EXCLUSIV) 인 경우
 	// my_prev_lock으로 오는 시그널을 기다려야 함.
@@ -166,7 +168,7 @@ void lock_wait(lock_t *lock_obj, trxList* t){
 		pthread_cond_wait(lock_obj->cond, t->mutex);
 	}
 	
-	pthread_mutex_unlock(t->mutex);
+	//pthread_mutex_unlock(t->mutex);
 	if(lock_obj->lock_mode == SHARED){
 		//SHARED인 경우 제일 처음 이라면 뮤텍스를 lock
 		if(l->head == lock_obj){
