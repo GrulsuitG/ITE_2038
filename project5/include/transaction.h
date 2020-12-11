@@ -8,7 +8,7 @@
 typedef struct trxList trxList;
 #include "lock_table.h"
 #include "buffer.h"
-#define TRX_TABLE_SIZE 4321
+#define TRX_TABLE_SIZE 431
 
 #define SUCCESS 0
 #define FAIL 1
@@ -44,4 +44,5 @@ trxList* trx_make_list();
 int trx_hash(int trx_id);
 trxList* trx_hash_add(int trx_id, trxList *ht[]);
 trxList* trx_hash_find(int trx_id, trxList *ht[]);
+void trx_hash_delete(int index, trxList *t);
 #endif

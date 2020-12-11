@@ -11,7 +11,7 @@ int trx_begin(){
 	trxList* t = trx_hash_add(global_trx_id, trx_table);
 	t->id = global_trx_id++;
 	t->init = true;
-	fprintf(fp, "begin %d\n", t->id);
+	//fprintf(fp, "begin %d\n", t->id);
 	pthread_mutex_unlock(trx_manager_latch);
 	return t->id;
 }
@@ -24,14 +24,11 @@ int trx_commit(int trx_id){
 	int index = trx_hash(trx_id);
 	trxList* t = trx_hash_find(trx_id, trx_table);
 	pthread_mutex_unlock(trx_manager_latch);
-	if(t == NULL){
-		fprintf(fp, "%d list NULL\n", trx_id);
+	if(t == NULL || t->init == false){
+		//fprintf(fp, "%d list NULL\n", trx_id);
 		return 0;
 	}
-	if(t->init == false){
-		fprintf(fp, "%d list init x\n", trx_id);
-		return 0;
-	}
+	
 	l = t->lock;
 	while(l != NULL){
 		
@@ -42,22 +39,10 @@ int trx_commit(int trx_id){
 		pthread_mutex_unlock(lock_table_latch);
 	}
 
-	t->init = false;
-	if(trx_table[index] == t){
-		trx_table[index] = t->link;
-	}
-	else{
-		templist = trx_table[index];
-		while(templist->link == t){
-			templist = templist->link;
-		}
-		templist->link = t->link;
-	}
-	//pthread_mutex_unlock(t->mutex);
-	pthread_mutex_destroy(t->mutex);
-	free(t->mutex);
-	free(t);
-	fprintf(fp, "%d commit\n", trx_id);
+	
+	trx_hash_delete(index,t);
+	
+	//fprintf(fp, "%d commit\n", trx_id);
 	
 	return trx_id;
 
@@ -93,6 +78,7 @@ trxList* trx_hash_add(int trx_id, trxList *ht[]){
 	return l;
 }
 
+
 trxList* trx_hash_find(int trx_id, trxList *ht[]){
 	trxList *node;
 	int index = trx_hash(trx_id);
@@ -101,6 +87,27 @@ trxList* trx_hash_find(int trx_id, trxList *ht[]){
 			return node;
 	}
 	return NULL;
+}
+
+
+void trx_hash_delete(int index, trxList *t){
+	trxList *templist;
+	t->init = false;
+	
+	if(trx_table[index] == t){
+		trx_table[index] = t->link;
+	}
+	else{
+		templist = trx_table[index];
+		while(templist->link == t){
+			templist = templist->link;
+		}
+		templist->link = t->link;
+	}
+	
+	pthread_mutex_destroy(t->mutex);
+	free(t->mutex);
+	free(t);
 }
 
 bool detection(int trx_id, int wait){
