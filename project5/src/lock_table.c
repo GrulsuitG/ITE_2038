@@ -89,7 +89,7 @@ int lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode, lock_t* r
 
 int lock_release(lock_t* lock_obj) {
 	list *l = lock_obj->pointer;
-	lock_t *tmp;
+	lock_t *next_lock;
 	trxList *t;
 	
 	// 1개 인경우
@@ -107,33 +107,34 @@ int lock_release(lock_t* lock_obj) {
 	}
 	// 여러개 중 list의 가장 첫번째 인 경우
 	else if(l->head == lock_obj){
-		tmp = lock_obj->next;
-		l->head =tmp;
-		tmp->prev = NULL;
+		next_lock = lock_obj->next;
+		l->head =next_lock;
+		next_lock->prev = NULL;
 		
 		
-		tmp->run =true;
-		//pthread_mutex_lock(trx_manager_latch);
-		t= trx_hash_find(tmp->trx_id, trx_table);
-		
+		next_lock->run =true;
+		pthread_mutex_lock(trx_manager_latch);
+		t= trx_hash_find(next_lock->trx_id, trx_table);
 		pthread_mutex_lock(t->mutex);
-		pthread_cond_signal(lock_obj->cond);
+		pthread_cond_signal(next_lock->cond);
 		pthread_mutex_unlock(t->mutex);
-		//pthread_mutex_unlock(trx_manager_latch);
+		pthread_mutex_unlock(trx_manager_latch);
 	}
 	// list 중간에 있는 경우
 	else{
 		//printf("b");
-		tmp = lock_obj->next;
+		next_lock = lock_obj->next;
 		lock_obj->next->prev = lock_obj->prev;
 		lock_obj->prev->next = lock_obj->next;
 		
-		//pthread_mutex_lock(trx_manager_latch);
-		t= trx_hash_find(tmp->trx_id, trx_table);
+		
+		pthread_mutex_lock(trx_manager_latch);
+		t= trx_hash_find(next_lock->trx_id, trx_table);
 		pthread_mutex_lock(t->mutex);
-		pthread_cond_signal(lock_obj->cond);
+		pthread_cond_signal(next_lock->cond);
 		pthread_mutex_unlock(t->mutex);
-		//pthread_mutex_unlock(trx_manager_latch);
+		pthread_mutex_unlock(trx_manager_latch);
+		
 	}
 	
  	l->lock_num--;
@@ -149,17 +150,21 @@ void lock_wait(lock_t *lock_obj, trxList* t){
 	list *l = lock_obj->pointer;
 	lock_t *tmp;
 	
+	pthread_mutex_lock(trx_manager_latch);
+	pthread_mutex_lock(t->mutex);
+	pthread_mutex_unlock(trx_manager_latch);
 	
 	//abort 돼서 lock rlease된경우가 있으니 run 변수를 통해 확인
-	while(true){
+	pthread_cond_wait(lock_obj->cond, t->mutex);
+	/*while(true){
 		tmp= lock_obj->prev;
 		if(tmp == NULL)
 			break;
-		pthread_cond_wait(tmp->cond, t->mutex);
+		
 		if(lock_obj->run){
 			break;
 		}
-	}
+	}*/
 	//기다리는 락이 SHARED인 경우
 	if(lock_obj->lock_mode == SHARED){
 		if(lock_obj->next && lock_obj->next->lock_mode == SHARED){
@@ -167,8 +172,9 @@ void lock_wait(lock_t *lock_obj, trxList* t){
 			pthread_cond_signal(lock_obj->next->cond);
 		}
 	}
-	pthread_mutex_lock(l->mutex);
 	pthread_mutex_unlock(t->mutex);
+	pthread_mutex_lock(l->mutex);
+	
 	return ;
 }
 
