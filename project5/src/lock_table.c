@@ -100,6 +100,7 @@ int lock_release(lock_t* lock_obj) {
 	}
 	// 마지막인경우
 	else if(l->tail == lock_obj ){
+		//printf("d");
 		l->tail = lock_obj->prev;
 		lock_obj->prev->next = NULL;
 	}
@@ -111,12 +112,12 @@ int lock_release(lock_t* lock_obj) {
 		
 		
 		next_lock->run =true;
-		pthread_mutex_lock(trx_manager_latch);
+		
 		t= trx_hash_find(next_lock->trx_id, trx_table);
 		pthread_mutex_lock(t->mutex);
 		pthread_cond_signal(next_lock->cond);
 		pthread_mutex_unlock(t->mutex);
-		pthread_mutex_unlock(trx_manager_latch);
+		
 	}
 	// list 중간에 있는 경우는 abort이거나 SHARED lock 이므로 기다리고 있는 다음 lock 오브젝트를 깨우지 않는다.
 	else{
@@ -125,15 +126,13 @@ int lock_release(lock_t* lock_obj) {
 		next_lock->prev = lock_obj->prev;
 		prev_lock->next = lock_obj->next;
 		
-		// prev(SHARED)(mutex get) ->lock_obj(EXCLUSIVE)(wait)->next(SHARED)(wait)
+		// 예외 prev(SHARED)(mutex get) ->lock_obj(EXCLUSIVE)(wait)->next(SHARED)(wait)
 		if(lock_obj->lock_mode == EXCLUSIVE){
 			if(prev_lock ->lock_mode == SHARED && prev_lock->get && next_lock->lock_mode == SHARED){
-				pthread_mutex_lock(trx_manager_latch);
 				t= trx_hash_find(next_lock->trx_id, trx_table);
 				pthread_mutex_lock(t->mutex);
 				pthread_cond_signal(next_lock->cond);
 				pthread_mutex_unlock(t->mutex);
-				pthread_mutex_unlock(trx_manager_latch);
 			}
 		}
 
@@ -150,8 +149,7 @@ int lock_release(lock_t* lock_obj) {
 
 void lock_wait(lock_t *lock_obj, trxList* t){
 	list *l = lock_obj->pointer;
-	lock_t *next_lock = lock_obj->next;
-	lock_t *prev_lock = lock_obj->prev;
+	lock_t *next_lock, *prev_lock;
 	
 	pthread_mutex_lock(trx_manager_latch);
 	pthread_mutex_lock(t->mutex);
@@ -159,6 +157,7 @@ void lock_wait(lock_t *lock_obj, trxList* t){
 	
 	//othertrx_lock(SHARED) -> my_prev_lock(SHARED) -> my_cur_lock(EXCLUSIV) 인 경우
 	// my_prev_lock으로 오는 시그널을 기다려야 함.
+	prev_lock = lock_obj->prev;
 	if(prev_lock && prev_lock->trx_id == lock_obj->trx_id){
 		pthread_cond_wait(prev_lock->cond, t->mutex);	
 	}
@@ -174,6 +173,7 @@ void lock_wait(lock_t *lock_obj, trxList* t){
 			pthread_mutex_lock(l->mutex);
 		}
 		//lock_obj(SHARED)->next_lock(SHARED)
+		next_lock = lock_obj->next;
 		if(next_lock && next_lock->lock_mode == SHARED){
 			pthread_cond_signal(next_lock->cond);
 		}

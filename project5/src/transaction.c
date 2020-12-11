@@ -17,19 +17,19 @@ int trx_begin(){
 }
 
 int trx_commit(int trx_id){
-	pthread_mutex_lock(trx_manager_latch);
 	
 	lock_t *l, *temp;
 	trxList * templist;
 	int index = trx_hash(trx_id);
 	trxList* t = trx_hash_find(trx_id, trx_table);
-	pthread_mutex_unlock(trx_manager_latch);
+	
 	if(t == NULL || t->init == false){
 		//fprintf(fp, "%d list NULL\n", trx_id);
 		return 0;
 	}
 	
 	l = t->lock;
+	
 	while(l != NULL){
 		
 		temp = l;
@@ -80,12 +80,16 @@ trxList* trx_hash_add(int trx_id, trxList *ht[]){
 
 
 trxList* trx_hash_find(int trx_id, trxList *ht[]){
+	pthread_mutex_lock(trx_manager_latch);
 	trxList *node;
 	int index = trx_hash(trx_id);
 	for(node = ht[index]; node; node = node->link){
-		if(node->id == trx_id)
+		if(node->id == trx_id){
+			pthread_mutex_unlock(trx_manager_latch);
 			return node;
+		}
 	}
+	pthread_mutex_unlock(trx_manager_latch);
 	return NULL;
 }
 

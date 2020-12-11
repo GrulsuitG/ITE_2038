@@ -15,7 +15,7 @@ int init_db(int num_buf){
 	unique_id = 1;
 	init_trx();
 	init_lock_table();
-	fp = fopen("log.txt", "w");
+	//fp = fopen("log.txt", "w");
 	return 0;
 }
 
