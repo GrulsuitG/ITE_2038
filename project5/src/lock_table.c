@@ -17,9 +17,12 @@ int lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode, lock_t* r
 	ret_lock->lock_mode = lock_mode;
 	ret_lock->trx_id = trx_id;
 	l->lock_num++;
+	pthread_mutex_lock(trx_manager_latch);
 	ret_lock->trx_next = t->lock;
 	t->lock = ret_lock;
-	
+	pthread_mutex_unlock(trx_manager_latch);
+		
+
 	//lock 오브젝트를 처음 다는 경우
 	if(l->lock_num == 1){
 		l->head = ret_lock;
@@ -52,10 +55,12 @@ int lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode, lock_t* r
 		}
 		//앞 lock 오브젝트랑 trx_id가 다른 경우
 		else {
+			pthread_mutex_lock(trx_manager_latch);
 			if(detection(trx_id, prev_lock->trx_id)){
+				pthread_mutex_unlock(trx_manager_latch);
 				return DEADLOCK;
 			}
-			
+			pthread_mutex_unlock(trx_manager_latch);
 			//ret_lock의 앞에 달린 lock오브젝트가 shared 나도 shared
 			if(prev_lock->lock_mode == SHARED && lock_mode == SHARED){
 					if(prev_lock->get == false){

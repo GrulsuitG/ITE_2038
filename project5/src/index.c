@@ -533,6 +533,7 @@ int find_record(int table_id, int64_t key, int trx_id, int lock_mode ,trxList *t
     	pthread_mutex_lock(lock_table_latch);
     	ret = lock_acquire(table_id, key, trx_id, lock_mode, lock_obj, t);
     	pthread_mutex_unlock(lock_table_latch);
+    	
     	lock_obj->pointer->pagenum = page->mypage;
 		
 		if(ret == ACQUIRED){
