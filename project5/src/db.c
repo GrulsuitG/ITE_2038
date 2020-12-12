@@ -15,7 +15,7 @@ int init_db(int num_buf){
 	unique_id = 1;
 	init_trx();
 	init_lock_table();
-	//fp = fopen("log.txt", "w");
+	fp = fopen("log.txt", "w");
 	return 0;
 }
 
@@ -90,24 +90,19 @@ int db_find(int table_id, int64_t key, char *ret_val, int trx_id){
 	int result;
 	
 
-  	if(!init){
+  	if(!init || !tableList[table_id-1].is_open){
 		trx_abort(trx_id);
 		return -1;
 	}
   	
-  	if(!tableList[table_id-1].is_open){
-		trx_abort(trx_id);
-		return -1;
-	}
 	t = trx_hash_find(trx_id, trx_table);
 	if(t == NULL || t->init == false){
 		trx_abort(trx_id);
 		return -1;
 	}
 	
-	result= find_record(table_id, key, trx_id, SHARED ,t, ret_val);
+	result = find_record(table_id, key, trx_id, SHARED ,t, ret_val);
 	if(result == FAIL){
-		trx_abort(trx_id);
 		return -1;
 	}
 	return 0;
@@ -115,29 +110,20 @@ int db_find(int table_id, int64_t key, char *ret_val, int trx_id){
 int db_update(int table_id, int64_t key, char *values, int trx_id){
 	trxList* t;
 	int result;
-  	if(!init){
+	
+  	if(!init || !tableList[table_id-1].is_open){
 		trx_abort(trx_id);
 		return -1;
 	}
   	
-  	if(!tableList[table_id-1].is_open){
-		trx_abort(trx_id);
-		return -1;
-	}
-	
 	t = trx_hash_find(trx_id, trx_table);
-	if(t == NULL){
-		trx_abort(trx_id);
-		return -1;
-	}
-	if(t->init == false){
+	if(t == NULL || t->init == false){
 		trx_abort(trx_id);
 		return -1;
 	}
 	
 	result = find_record(table_id, key, trx_id, EXCLUSIVE, t, values);
 	if(result == FAIL){
-		trx_abort(trx_id);
 		return -1;
 	}
 
@@ -153,7 +139,7 @@ int close_table(int table_id){
 	if(tableList[table_id-1].is_open){
 		if(index_close(table_id)){
 			return -1;
-			}
+		}
 		else{
 			tableList[table_id-1].is_open = false;
 			return 0;

@@ -33,10 +33,8 @@ struct lock_t {
 	lock_t *prev;
 
 	char *stored;
-	pagenum_t pagenum;
 	bool get;
-	bool get_mutex;
-	bool run;
+
 	int lock_mode;
 	int trx_id;
 	lock_t *trx_next;
@@ -47,6 +45,7 @@ struct list{
 	int table_id;
 	int64_t key;
 	int lock_num;
+	pagenum_t pagenum;
 	pthread_mutex_t *mutex;
 	
 	list *link;

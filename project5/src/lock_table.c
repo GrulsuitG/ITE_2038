@@ -52,9 +52,9 @@ int lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode, lock_t* r
 		}
 		//앞 lock 오브젝트랑 trx_id가 다른 경우
 		else {
-			//if(detection(trx_id, prev_lock->trx_id)){
-				//return DEADLOCK;
-			//}
+			if(detection(trx_id, prev_lock->trx_id)){
+				return DEADLOCK;
+			}
 			
 			//ret_lock의 앞에 달린 lock오브젝트가 shared 나도 shared
 			if(prev_lock->lock_mode == SHARED && lock_mode == SHARED){
@@ -103,8 +103,8 @@ int lock_release(lock_t* lock_obj) {
 		next_lock->prev = NULL;
 		
 		
-		//lock_obj(EXCLUIVE) - next_lock(?) 인 경우 
-		//lock_obj(?) - next_lock(EXCLUIVE) 인 경우 두가지 경우에만 다음 잠들어있는 락을 깨워줌
+		//lock_obj(EXCLUSIVE) - next_lock(?) 인 경우 
+		//lock_obj(?) - next_lock(EXCLUSIVE) 인 경우 두가지 경우에만 다음 잠들어있는 락을 깨워줌
 		if(lock_obj->lock_mode == EXCLUSIVE || next_lock->lock_mode == EXCLUSIVE){
 			t= trx_hash_find(next_lock->trx_id, trx_table);
 			pthread_mutex_lock(t->mutex);
@@ -185,10 +185,8 @@ void lock_wait(lock_t *lock_obj, trxList* t){
 	else if(lock_obj->lock_mode == EXCLUSIVE){
 		pthread_mutex_lock(l->mutex);
 	}
+	
 	lock_obj->get =true;
-	
-	
-	
 	return ;
 }
 
@@ -202,7 +200,6 @@ lock_t* lock_make_node(){
 	node->cond = (pthread_cond_t*)malloc(sizeof(pthread_cond_t));
 	pthread_cond_init(node->cond,0);
 	node->get = false;
-	node->run = false;
 	node->pointer = NULL;
 	node->next = NULL;
 	node->prev = NULL;
@@ -217,14 +214,15 @@ list* make_list(int table_id, int64_t key){
 	}
 	l->table_id = table_id;
 	l->key = key;
-	l->lock_num =0;
+	l->lock_num = 0;
+	l->pagenum = 0;
 	l->mutex = (pthread_mutex_t*) malloc(sizeof(pthread_mutex_t));
 	pthread_mutex_init(l->mutex, 0);
 	l->link = NULL;
 	return l;
 }
 int hash_function(int table_id, int64_t key){
-	return (table_id+(9*key)) % TABLE_SIZE;
+	return (table_id+(10*key)) % TABLE_SIZE;
 }
 
 list* hash_add(const int table_id, const int64_t key, list *ht[]){
