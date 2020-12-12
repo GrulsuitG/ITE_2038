@@ -39,15 +39,12 @@ int lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode, lock_t* r
 			if(prev_lock->lock_mode == SHARED && lock_mode == EXCLUSIVE){
 				//othertrx_lock(0) -> my_prev_lock(0) -> my_cur_lock(1)
 				if(prev_lock->prev){
-					
 					return NEED_TO_WAIT;
 				}
-				
 			}
 			// lock_mode 를 exclusive로 업그레이드 해서 List에 달아줌.
 			else if(prev_lock->lock_mode == EXCLUSIVE && lock_mode == SHARED){
 				ret_lock->lock_mode = EXCLUSIVE;
-				
 			}
 			
 			ret_lock->get = true;
@@ -62,7 +59,6 @@ int lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode, lock_t* r
 			//ret_lock의 앞에 달린 lock오브젝트가 shared 나도 shared
 			if(prev_lock->lock_mode == SHARED && lock_mode == SHARED){
 					if(prev_lock->get == false){
-						
 						return NEED_TO_WAIT;
 					}
 					if(prev_lock->get == true){
@@ -72,12 +68,10 @@ int lock_acquire(int table_id, int64_t key, int trx_id, int lock_mode, lock_t* r
 			}
 			//앞에 달린 lock이 shared 내가 exclusive
  			else if(prev_lock->lock_mode == SHARED && lock_mode == EXCLUSIVE){
-  				
   				return NEED_TO_WAIT;
  			}
 			//앞에 달린 Lock이 exclusive 인 경우
 			else if(prev_lock->lock_mode == EXCLUSIVE){
-  				
   				return NEED_TO_WAIT;
 			}
 		}
@@ -93,14 +87,12 @@ int lock_release(lock_t* lock_obj) {
 	
 	// 1개 인경우
 	if(l->lock_num == 1){
-		//printf("a");
 		l->head = NULL;
 		l->tail = NULL;
 		
 	}
 	// 마지막인경우
 	else if(l->tail == lock_obj ){
-		//printf("d");
 		l->tail = lock_obj->prev;
 		lock_obj->prev->next = NULL;
 	}
@@ -111,13 +103,24 @@ int lock_release(lock_t* lock_obj) {
 		next_lock->prev = NULL;
 		
 		
-		next_lock->run =true;
-		//pthread_mutex_lock(trx_manager_latch);
-		t= trx_hash_find(next_lock->trx_id, trx_table);
-		pthread_mutex_lock(t->mutex);
-		pthread_cond_signal(next_lock->cond);
-		pthread_mutex_unlock(t->mutex);
-		//pthread_mutex_unlock(trx_manager_latch);
+		//lock_obj(EXCLUIVE) - next_lock(?) 인 경우 
+		//lock_obj(?) - next_lock(EXCLUIVE) 인 경우 두가지 경우에만 다음 잠들어있는 락을 깨워줌
+		if(lock_obj->lock_mode == EXCLUSIVE || next_lock->lock_mode == EXCLUSIVE){
+			t= trx_hash_find(next_lock->trx_id, trx_table);
+			pthread_mutex_lock(t->mutex);
+			pthread_cond_signal(next_lock->cond);
+			pthread_mutex_unlock(t->mutex);
+		}
+		//lock_obj(trx1)(SHARED) -> next_lock(trx2)(SHARED) -> next_lock(trx2)(EXCLUSIVE) 인 경우
+		else if(next_lock->next && next_lock->next->trx_id == next_lock->trx_id &&
+			next_lock->lock_mode == SHARED && next_lock->next->lock_mode == EXCLUSIVE){
+			t= trx_hash_find(next_lock->trx_id, trx_table);
+			pthread_mutex_lock(t->mutex);
+			pthread_cond_signal(next_lock->cond);
+			pthread_mutex_unlock(t->mutex);
+		}
+		
+		
 	}
 	// list 중간에 있는 경우는 abort이거나 SHARED lock 이므로 기다리고 있는 다음 lock 오브젝트를 깨우지 않는다.
 	else{
@@ -129,12 +132,10 @@ int lock_release(lock_t* lock_obj) {
 		// 예외 prev(SHARED)(mutex get) ->lock_obj(EXCLUSIVE)(wait)->next(SHARED)(wait)
 		if(lock_obj->lock_mode == EXCLUSIVE){
 			if(prev_lock ->lock_mode == SHARED && prev_lock->get && next_lock->lock_mode == SHARED){
-				//pthread_mutex_lock(trx_manager_latch);
 				t= trx_hash_find(next_lock->trx_id, trx_table);
 				pthread_mutex_lock(t->mutex);
 				pthread_cond_signal(next_lock->cond);
 				pthread_mutex_unlock(t->mutex);
-				//pthread_mutex_unlock(trx_manager_latch);
 			}
 		}
 
@@ -152,10 +153,8 @@ int lock_release(lock_t* lock_obj) {
 void lock_wait(lock_t *lock_obj, trxList* t){
 	list *l = lock_obj->pointer;
 	lock_t *next_lock, *prev_lock;
+	trxList *next_trx;
 	
-	//pthread_mutex_lock(trx_manager_latch);
-	//pthread_mutex_lock(t->mutex);
-	//pthread_mutex_unlock(trx_manager_latch);
 	
 	//othertrx_lock(SHARED) -> my_prev_lock(SHARED) -> my_cur_lock(EXCLUSIV) 인 경우
 	// my_prev_lock으로 오는 시그널을 기다려야 함.
@@ -177,7 +176,10 @@ void lock_wait(lock_t *lock_obj, trxList* t){
 		//lock_obj(SHARED)->next_lock(SHARED)
 		next_lock = lock_obj->next;
 		if(next_lock && next_lock->lock_mode == SHARED){
+			next_trx = trx_hash_find(next_lock->trx_id, trx_table);
+			pthread_mutex_lock(next_trx->mutex);
 			pthread_cond_signal(next_lock->cond);
+			pthread_mutex_unlock(next_trx->mutex);
 		}
 	}
 	else if(lock_obj->lock_mode == EXCLUSIVE){
