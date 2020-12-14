@@ -1,0 +1,31 @@
+[ANALYSIS] Analysis pass start
+[ANALYSIS] Analysis success. Winner: 1 3 4 6 7 8 9 Loser: 2 5 10 
+[REDO] Redo pass start
+LSN 28 [BEGIN] Transaction id 1
+LSN 316 [CONSIDER_REDO] Transaction id 1
+LSN 344 [COMMIT] Transaction id 1
+LSN 372 [BEGIN] Transaction id 2
+LSN 660 [CONSIDER_REDO] Transaction id 2
+LSN 688 [BEGIN] Transaction id 3
+LSN 976 [CONSIDER_REDO] Transaction id 3
+LSN 1004 [COMMIT] Transaction id 3
+LSN 1032 [BEGIN] Transaction id 4
+LSN 1320 [CONSIDER_REDO] Transaction id 4
+LSN 1348 [COMMIT] Transaction id 4
+LSN 1376 [BEGIN] Transaction id 5
+LSN 1664 [CONSIDER_REDO] Transaction id 5
+LSN 1692 [BEGIN] Transaction id 6
+LSN 1980 [CONSIDER_REDO] Transaction id 6
+LSN 2008 [COMMIT] Transaction id 6
+LSN 2036 [BEGIN] Transaction id 7
+LSN 2324 [CONSIDER_REDO] Transaction id 7
+LSN 2352 [COMMIT] Transaction id 7
+LSN 2380 [BEGIN] Transaction id 8
+LSN 2668 [CONSIDER_REDO] Transaction id 8
+LSN 2696 [COMMIT] Transaction id 8
+LSN 2724 [BEGIN] Transaction id 9
+LSN 3012 [CONSIDER_REDO] Transaction id 9
+LSN 3040 [COMMIT] Transaction id 9
+LSN 3068 [BEGIN] Transaction id 10
+LSN 3356 [UPDATE] Transaction id 10 redo apply
+[REDO] Redo pass end
