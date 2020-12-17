@@ -152,9 +152,9 @@ int eviction(){
 		if(tail->ref_bit == false ){
 			if(pthread_mutex_trylock(tail->page_latch) == 0){
 				pthread_mutex_lock(buffer_manager_latch);
-				/*pthread_mutex_lock(log_buffer_latch);
+				pthread_mutex_lock(log_buffer_latch);
 				logbuf_flush();
-				pthread_mutex_unlock(log_buffer_latch);*/
+				pthread_mutex_unlock(log_buffer_latch);
 				if(tail->is_dirty){
 					page = tail->frame;
 					if(tail->pagenum == 0){

@@ -35,7 +35,6 @@ int trx_begin(){
 	pthread_mutex_lock(t->mutex);
 	
 	pthread_mutex_unlock(trx_manager_latch);
-	//printf("%d begin\n", t->id);
 	return t->id;
 }
 
@@ -215,7 +214,6 @@ void trx_hash_delete(int index, trxList *t){
 }
 
 bool detection(int trx_id, int wait){
-	//printf("Detection!\n");
 	trxList* t;
 	adj_node *n;
 	lock_t *cur, *next;
