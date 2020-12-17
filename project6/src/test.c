@@ -358,7 +358,7 @@ slock_test()
  * x-lock only test without deadlock
  */
 
-#define XLT_TABLE_NUMBER		(3)
+#define XLT_TABLE_NUMBER		(1)
 #define XLT_TABLE_SIZE			(1000)
 #define XLT_THREAD_NUMBER		(5)
 
@@ -411,10 +411,10 @@ XLT_func(void* args)
 		}
 
 		/* transaction commit */
-		ret = rand()%6;
-		if(ret == 0|| ret ==5) 
+		ret = rand()%2;
+		if(ret == 0) 
 			trx_commit(transaction_id);
-		if(ret == 1|| ret ==4)
+		if(ret == 1)
 			trx_abort(transaction_id);
 	}
 

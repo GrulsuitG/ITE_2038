@@ -29,8 +29,6 @@ int trx_begin(){
 	t->init = true;
 	t->node = n;
 	n->pointer = t;
-	//fprintf(fp, "begin %d\n", t->id);
-	//printf("begin %d\n", t->id);
 	pthread_mutex_lock(log_buffer_latch);
 	t->LSN = log_write(BEGIN, t->id, 0, 0, NULL, 0, NULL, 0);
 	pthread_mutex_unlock(log_buffer_latch);
@@ -78,6 +76,53 @@ int trx_commit(int trx_id){
 	
 	return trx_id;
 
+}
+
+int trx_abort(int trx_id){
+	int index, i;
+	uint64_t LSN;
+	trxList *t;
+	list *l;
+	lock_t *temp, *cur;	
+	page_t* page;
+	t = trx_hash_find(trx_id, trx_table);
+	if(t == NULL || t->init == false){
+		return 0;
+	}
+	
+	cur = t->lock;
+	
+	while(cur){
+		if(cur->lock_mode == EXCLUSIVE){
+			l = cur->pointer;
+			page = buf_read_page(l->table_id, l->pagenum);
+			for(i = 0; i<page->num_keys; i++){
+				if(page->keys[i] == l->key) {
+					strncpy(page->record[i]->value, cur->stored, VALUE_SIZE);
+					break;
+				}
+			}
+			pthread_mutex_lock(log_buffer_latch);
+			LSN = log_write(COMPENSATE, trx_id, t->LSN, l->table_id, page, i ,cur->stored, cur->prev_LSN); 
+			pthread_mutex_unlock(log_buffer_latch);
+			page->LSN = LSN;
+			buf_return_page(l->table_id, l->pagenum, true, page->index);
+		}
+		
+		temp = cur;
+		cur = cur->trx_next;
+		
+		lock_release(temp);
+		
+	}
+	
+	pthread_mutex_unlock(t->mutex);
+	pthread_mutex_lock(log_buffer_latch);
+	log_write(ROLLBACK, trx_id, t->LSN, 0, NULL, 0 ,NULL, 0); 
+	pthread_mutex_unlock(log_buffer_latch);
+	index = trx_hash(trx_id);
+	trx_hash_delete(index, t);
+	return trx_id;
 }
 
 trxList* trx_make_list(){
@@ -282,52 +327,5 @@ void dfs(int v, int visit[], int n){
 	visit[v] = 2;
 }
 
-int trx_abort(int trx_id){
-	int index, i;
-	uint64_t LSN;
-	trxList *t;
-	list *l;
-	lock_t *temp, *cur;	
-	page_t* page;
-	t = trx_hash_find(trx_id, trx_table);
-	if(t == NULL || t->init == false){
-		return 0;
-	}
-	
-	pthread_mutex_lock(lock_table_latch);
-	cur = t->lock;
-	
-	while(cur){
-		if(cur->lock_mode == EXCLUSIVE){
-			l = cur->pointer;
-			page = buf_read_page(l->table_id, l->pagenum);
-			for(i = 0; i<page->num_keys; i++){
-				if(page->keys[i] == l->key) {
-					strncpy(page->record[i]->value, cur->stored, VALUE_SIZE);
-					break;
-				}
-			}
-			pthread_mutex_lock(log_buffer_latch);
-			LSN = log_write(COMPENSATE, trx_id, t->LSN, l->table_id, page, i ,cur->stored, cur->prev_LSN); 
-			pthread_mutex_unlock(log_buffer_latch);
-			page->LSN = LSN;
-			buf_return_page(l->table_id, l->pagenum, true, page->index);
-		}
-		
-		temp = cur;
-		cur = cur->trx_next;
-		
-		lock_release(temp);
-		
-	}
-	pthread_mutex_unlock(lock_table_latch);
-	
-	pthread_mutex_unlock(t->mutex);
-	pthread_mutex_lock(log_buffer_latch);
-	log_write(ROLLBACK, trx_id, t->LSN, 0, NULL, 0 ,NULL, 0); 
-	pthread_mutex_unlock(log_buffer_latch);
-	index = trx_hash(trx_id);
-	trx_hash_delete(index, t);
-	return trx_id;
-}
+
 

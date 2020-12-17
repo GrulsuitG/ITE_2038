@@ -214,7 +214,7 @@ void undo(int log_num, int *loser, log_record** log, int trxnum){
 	page_t* page;
 	uint64_t LSN;
 	fprintf(logmsg, "[UNDO] Undo pass start\n");
-	/*for(i=trxnum; i>0; i--){
+	for(i=trxnum; i>0; i--){
 		if(loser[i] != 0){
 			trx = loser[i];
 			cur = log[trx];
@@ -240,7 +240,7 @@ void undo(int log_num, int *loser, log_record** log, int trxnum){
 					return;
 			}
 		}
-	}*/
+	}
 	fprintf(logmsg, "[UNDO] undo pass end\n");
 }
 
