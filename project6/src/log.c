@@ -27,20 +27,18 @@ void recovery(int flag, int log_num, char* log_path, char* logmsg_path){
 		}
 		if(flag == REDO_CRASH){
 			redo(log_num, loser, log, trxnum);
-			logbuf_flush();
-			for(i=1;i<=10; i++){
-				close_table(i);
-			}			
+			
 		}
 		else if(flag == UNDO_CRASH){
 			redo(0, loser, log, trxnum);
 			undo(log_num, loser, log, trxnum);
-			logbuf_flush();
-			for(i=1;i<=10; i++){
+			
+			
+		}
+		logbuf_flush();
+		for(i=1;i<=10; i++){
 				close_table(i);
 			}
-		}
-		
 		free(log);
 	}
 	free(loser);
@@ -118,7 +116,7 @@ int analysis(int* loser){
 
 void redo(int log_num, int *loser, log_record** log, int trxnum){
 	int type, trx_id, size, redo_num;
-	int table_id, offset, index;
+	int table_id, offset, index, i;
 	uint64_t LSN, prev_LSN,next_undo;
 	pagenum_t pagenum;
 	page_t *page;
@@ -163,31 +161,26 @@ void redo(int log_num, int *loser, log_record** log, int trxnum){
 				fprintf(logmsg, "LSN %lu [CONSIDER_REDO] Transaction id %d\n", LSN+size, trx_id);
 			}
 			else{
-				for(int i=0; i<trxnum; i++){
-					if(loser[i] == trx_id){
-						temp = (log_record*)malloc(sizeof(log_record));
-						if(type == UPDATE)
-							temp->log_size = UPDATE_SIZE;
-						else if(type == COMPENSATE)
-							temp->log_size = COMPENSATE_SIZE;
-						temp->LSN = LSN;
-						temp->prev_LSN = prev_LSN;
-						temp->trx_id = trx_id;
-						temp->type = UPDATE;
-						temp->table_id = table_id;
-						temp->pagenum = pagenum;
-						temp->offset = offset;
-						temp->data_length = VALUE_SIZE;
-						strncpy(temp->old_data, old_data, VALUE_SIZE);
-						strncpy(temp->new_data, new_data, VALUE_SIZE);
-						if(type == COMPENSATE)
-							temp->next_undo = next_undo;
-							
-						temp->next = log[trx_id];
-						log[trx_id] = temp;
-						break;
-					}
-				}
+				temp = (log_record*)malloc(sizeof(log_record));
+				if(type == UPDATE)
+					temp->log_size = UPDATE_SIZE;
+				else if(type == COMPENSATE)
+				temp->log_size = COMPENSATE_SIZE;
+				temp->LSN = LSN;
+				temp->prev_LSN = prev_LSN;
+				temp->trx_id = trx_id;
+				temp->type = UPDATE;
+				temp->table_id = table_id;
+				temp->pagenum = pagenum;
+				temp->offset = offset;
+				temp->data_length = VALUE_SIZE;
+				strncpy(temp->old_data, old_data, VALUE_SIZE);
+				strncpy(temp->new_data, new_data, VALUE_SIZE);
+				if(type == COMPENSATE)
+					temp->next_undo = next_undo;
+					
+				temp->next = log[trx_id];
+				log[trx_id] = temp;
 				
 				index = (offset % PAGE_SIZE) / 128;
 				strncpy(page->record[index-1]->value, new_data, VALUE_SIZE);
