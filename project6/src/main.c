@@ -46,18 +46,22 @@ int main(){
 	for(int i=0; i<20; i++){
 
 		num = trx_begin();
-		a = (i+1);
+		printf("%d begin \n", num);
+		a = (i+1)*15;
 		choice = rand() %3;
 		db_update(2,a, "Hello", num);
+		printf("update %d: %d\n", num, a);
 		if(choice == 0){	
-			printf("%d commit\n", num);
+			
 			trx_commit(num);
+			printf("%d commit\n", num);
 		}
 		else if(choice ==1){
-			printf("%d abort\n", num);
+			
 			trx_abort(num);
+			printf("%d abort\n", num);
 		}
-		
+		//print_buf();
 	}
 	logbuf_flush();
 }

@@ -26,17 +26,20 @@ void recovery(int flag, int log_num, char* log_path, char* logmsg_path){
 		}
 		if(flag == REDO_CRASH){
 			redo(log_num, log);
-						
+			logbuf_flush();
+			for(i=1;i<=10; i++){
+				close_table(i);
+			}			
 		}
 		else if(flag == UNDO_CRASH){
 			redo(0, log);
 			undo(log_num, loser, log, trxnum);
-			
+			logbuf_flush();
+			for(i=1;i<=10; i++){
+				close_table(i);
+			}
 		}
-		logbuf_flush();
-		for(i=1;i<=10; i++){
-			close_table(i);
-		}
+		
 		free(log);
 	}
 	free(loser);

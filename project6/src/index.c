@@ -511,6 +511,7 @@ record* find(int table_id, pagenum_t *root, int64_t key) {
 }
 
 int find_record(int table_id, int64_t key, int trx_id, int lock_mode ,trxList *t, char* str){
+	
 	int ret, i = 0;
 	page_t *header = buf_read_page(table_id, 0);
 	page_t *page;
