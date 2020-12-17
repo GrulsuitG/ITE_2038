@@ -78,9 +78,9 @@ sort_table_id_key(TableId table_ids[], Key keys[], int count)
  * single thread test (STT)
  */
 
-#define SST_TABLE_NUMBER		(1)
-#define SST_TABLE_SIZE			(100)
-#define SST_OPERATION_NUMBER	(100)
+#define SST_TABLE_NUMBER		(2)
+#define SST_TABLE_SIZE			(1000)
+#define SST_OPERATION_NUMBER	(1000)
 
 pthread_mutex_t SST_mutex;
 int64_t SST_operation_count;
@@ -131,10 +131,10 @@ SST_func(void* args)
 			return NULL;
 		}
 
-		ret = rand()%6;
-		if(ret == 0|| ret ==5) 
+		ret = rand()%2;
+		if(ret == 0) 
 			trx_commit(transaction_id);
-		if(ret == 1|| ret ==4)
+		if(ret == 1)
 			trx_abort(transaction_id);
 	}
 
@@ -358,7 +358,7 @@ slock_test()
  * x-lock only test without deadlock
  */
 
-#define XLT_TABLE_NUMBER		(1)
+#define XLT_TABLE_NUMBER		(3)
 #define XLT_TABLE_SIZE			(1000)
 #define XLT_THREAD_NUMBER		(5)
 
@@ -437,10 +437,10 @@ xlock_test()
 	init_db(DATABASE_BUFFER_SIZE,0,0,"logfile.data", "logmsg.txt" );
 
 	/* open table */
-	for (int i = 1; i <= XLT_TABLE_NUMBER; i++) {
+	for (int i = 0; i < XLT_TABLE_NUMBER; i++) {
 		char* str = (char*) malloc(sizeof(char) * 100);
 		TableId table_id;
-		sprintf(str, "DATA%d", i);
+		sprintf(str, "DATA%d", i+1);
 		table_id = open_table(str);
 		table_id_array[i] = table_id;
 
@@ -809,14 +809,25 @@ deadlock_test()
 }
 
 void test(){
-	int id;	
+	int id;
+	char value[120];	
 	init_db(DATABASE_BUFFER_SIZE,0,0,"logfile.data", "logmsg.txt" );
 	printf("%d\n",open_table("DATA1"));
 	printf("%d\n",open_table("DATA2"));
 	printf("%d\n",open_table("DATA3"));
+	
+	for(int j=1; j<4; j++)
 	for(int i=0; i<1000; i++){
-		id = rand()%3 +1;
-		db_insert(id, i, "hello");
+		db_insert(j, i, "hello");
+	}
+	
+	for(int j=1; j<4; j++){
+	id = trx_begin();
+	for(int i=0; i<1000; i++){
+		if(db_update(j, i, "value", id) == -1)
+			printf("what\n");
+	}
+	trx_commit(id);
 	}
 	/*
 	printf("%d\n",open_table("DATA1"));

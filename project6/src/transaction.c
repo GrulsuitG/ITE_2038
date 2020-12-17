@@ -31,10 +31,11 @@ int trx_begin(){
 	n->pointer = t;
 	//fprintf(fp, "begin %d\n", t->id);
 	//printf("begin %d\n", t->id);
-	pthread_mutex_lock(t->mutex);
 	pthread_mutex_lock(log_buffer_latch);
 	t->LSN = log_write(BEGIN, t->id, 0, 0, NULL, 0, NULL, 0);
 	pthread_mutex_unlock(log_buffer_latch);
+	pthread_mutex_lock(t->mutex);
+	
 	pthread_mutex_unlock(trx_manager_latch);
 	//printf("%d begin\n", t->id);
 	return t->id;
@@ -292,6 +293,7 @@ int trx_abort(int trx_id){
 	if(t == NULL || t->init == false){
 		return 0;
 	}
+	
 	pthread_mutex_lock(lock_table_latch);
 	cur = t->lock;
 	
@@ -319,10 +321,11 @@ int trx_abort(int trx_id){
 		
 	}
 	pthread_mutex_unlock(lock_table_latch);
+	
+	pthread_mutex_unlock(t->mutex);
 	pthread_mutex_lock(log_buffer_latch);
 	log_write(ROLLBACK, trx_id, t->LSN, 0, NULL, 0 ,NULL, 0); 
 	pthread_mutex_unlock(log_buffer_latch);
-	pthread_mutex_unlock(t->mutex);
 	index = trx_hash(trx_id);
 	trx_hash_delete(index, t);
 	return trx_id;

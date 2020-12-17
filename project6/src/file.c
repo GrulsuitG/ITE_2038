@@ -294,11 +294,6 @@ void file_write_page(int table_id, pagenum_t pagenum, const page_t* src){
 void file_write_root(int table_id, pagenum_t pagenum){
 	int fd = fdList[table_id];
 	
-	/*char* filename = tableList[table_id-1].name;
-	if((fd=open(filename, O_WRONLY)) < 0){
-		perror("file open error for write root");
-		exit(EXIT_FAILURE);
-	}*/
 	lseek(fd, sizeof(pagenum_t), SEEK_SET);
 	if(write(fd, &pagenum, sizeof(pagenum_t)) < 0){
 		perror("file write error for write root");
@@ -308,14 +303,12 @@ void file_write_root(int table_id, pagenum_t pagenum){
         perror("file sync error for wrte root");
         exit(EXIT_FAILURE);
     }
-	//close(fd);
     return;
 }
 
 int make_file(char* filename){
 	int fd;
     pagenum_t pagenum, num;
-	//isExist = access(filename, 00);
 
 	if((fd = open(filename,O_RDWR|O_CREAT,0644)) < 0){
 		perror("make file error");

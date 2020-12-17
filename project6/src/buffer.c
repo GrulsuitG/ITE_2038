@@ -47,8 +47,7 @@ page_t* buf_read_page(int table_id, pagenum_t pagenum){
 		index = find_empty(table_id, pagenum);
 		file_read_page(table_id, pagenum, block[index]->frame);
 	}
-	pthread_mutex_unlock(buffer_manager_latch);
-	pthread_mutex_lock(block[index]->page_latch);
+	
 	
 	block[index]->frame->index = index;
 	block[index]->table_id = table_id;
@@ -57,7 +56,8 @@ page_t* buf_read_page(int table_id, pagenum_t pagenum){
 	head = block[index];
 	
 	
-	
+	pthread_mutex_unlock(buffer_manager_latch);
+	pthread_mutex_lock(block[index]->page_latch);
 	return block[index]->frame;
 }
 
@@ -80,7 +80,7 @@ page_t* buf_alloc_page(int table_id){
 		index = find_empty(table_id, pagenum);
 	}
 	//fprintf(fp,"mutex lock ");
-	pthread_mutex_unlock(buffer_manager_latch);
+	
 	pthread_mutex_lock(block[index]->page_latch);
 	//fprintf(fp, "%d\n", index);
 	
@@ -93,7 +93,7 @@ page_t* buf_alloc_page(int table_id){
 	block[index]->table_id = table_id;
 	block[index]->ref_bit = true;
 	head = block[index];
-	
+	pthread_mutex_unlock(buffer_manager_latch);
 	return block[index]->frame;
 }
 void buf_free_page(int table_id, pagenum_t pagenum, int index){
@@ -144,16 +144,14 @@ int find_place(int table_id, pagenum_t pagenum){
 
 int eviction(){
 	int num = 0;
-	int table_id;
-	pagenum_t pagenum;
+	int id;
 	page_t *page;
 	tail = head->next;
 	pthread_mutex_unlock(buffer_manager_latch);
 	while(true){
 		if(tail->ref_bit == false ){
 			if(pthread_mutex_trylock(tail->page_latch) == 0){
-				table_id = tail->table_id;
-				pagenum = tail->pagenum;
+				pthread_mutex_lock(buffer_manager_latch);
 				pthread_mutex_lock(log_buffer_latch);
 				logbuf_flush();
 				pthread_mutex_unlock(log_buffer_latch);
@@ -166,10 +164,12 @@ int eviction(){
 						file_write_page(tail->table_id, tail->pagenum, page);
 					}
 				}
-				pthread_mutex_unlock(tail->page_latch);
+				id = tail->id;
+				buf_clear(tail->id);
 				head = tail;
-				pthread_mutex_lock(buffer_manager_latch);
-				return tail->id;
+				pthread_mutex_unlock(tail->page_latch);
+				
+				return id;
 			}
 		}
 		
