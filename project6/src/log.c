@@ -19,21 +19,21 @@ void recovery(int flag, int log_num, char* log_path, char* logmsg_path){
 		trxnum = analysis(loser);
 		log = (log_record**)malloc(sizeof(log_record*)*(trxnum+1));
 		if(flag == NORMAL){
-			redo(0, log);
+			redo(0, loser, log, trxnum);
 			undo(0, loser, log, trxnum);
 			lseek(fd_log_path,0, SEEK_SET);
 			truncate(log_path, 0);
 			
 		}
 		if(flag == REDO_CRASH){
-			redo(log_num, log);
+			redo(log_num, loser, log, trxnum);
 			logbuf_flush();
 			for(i=1;i<=10; i++){
 				close_table(i);
 			}			
 		}
 		else if(flag == UNDO_CRASH){
-			redo(0, log);
+			redo(0, loser, log, trxnum);
 			undo(log_num, loser, log, trxnum);
 			logbuf_flush();
 			for(i=1;i<=10; i++){
@@ -116,7 +116,7 @@ int analysis(int* loser){
 	return winnum;
 }
 
-void redo(int log_num, log_record** log, int *loser, int trxnum){
+void redo(int log_num, int *loser, log_record** log, int trxnum){
 	int type, trx_id, size, redo_num;
 	int table_id, offset, index;
 	uint64_t LSN, prev_LSN,next_undo;
@@ -163,7 +163,7 @@ void redo(int log_num, log_record** log, int *loser, int trxnum){
 				fprintf(logmsg, "LSN %lu [CONSIDER_REDO] Transaction id %d\n", LSN+size, trx_id);
 			}
 			else{
-				for(i=0; i<trx_num; i++){
+				for(int i=0; i<trxnum; i++){
 					if(loser[i] == trx_id){
 						temp = (log_record*)malloc(sizeof(log_record));
 						if(type == UPDATE)
