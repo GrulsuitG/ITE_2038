@@ -33,9 +33,10 @@ int trx_begin(){
 	//printf("begin %d\n", t->id);
 	pthread_mutex_lock(t->mutex);
 	pthread_mutex_lock(log_buffer_latch);
-	t->LSN = log_write(BEGIN, t->id, 0, 0, NULL, 0, NULL);
+	t->LSN = log_write(BEGIN, t->id, 0, 0, NULL, 0, NULL, 0);
 	pthread_mutex_unlock(log_buffer_latch);
 	pthread_mutex_unlock(trx_manager_latch);
+	//printf("%d begin\n", t->id);
 	return t->id;
 }
 
@@ -67,7 +68,7 @@ int trx_commit(int trx_id){
 	pthread_mutex_unlock(lock_table_latch);
 	
 	pthread_mutex_lock(log_buffer_latch);
-	log_write(COMMIT, t->id, 0, 0, NULL, 0, NULL);
+	log_write(COMMIT, t->id, 0, 0, NULL, 0, NULL, 0);
 	logbuf_flush();
 	pthread_mutex_unlock(log_buffer_latch);
 	trx_hash_delete(index,t);
@@ -208,7 +209,7 @@ bool detection(int trx_id, int wait){
 			cur = t->lock;
 				
 			while(cur){
-			/*	next = cur->next;
+				next = cur->next;
 				if(next && (next->get == false)){
 					if(cur->trx_id == next->trx_id){
 						cur = cur->trx_next;
@@ -217,7 +218,7 @@ bool detection(int trx_id, int wait){
 
 					//graph[active[next->trx_id]][active[n->trx_id]] = 1;
 					
-				}*/
+				}
 				cur = cur->trx_next;
 			}
 		}
@@ -282,6 +283,7 @@ void dfs(int v, int visit[], int n){
 
 int trx_abort(int trx_id){
 	int index, i;
+	uint64_t LSN;
 	trxList *t;
 	list *l;
 	lock_t *temp, *cur;	
@@ -303,6 +305,10 @@ int trx_abort(int trx_id){
 					break;
 				}
 			}
+			pthread_mutex_lock(log_buffer_latch);
+			LSN = log_write(COMPENSATE, trx_id, t->LSN, l->table_id, page, i ,cur->stored, cur->prev_LSN); 
+			pthread_mutex_unlock(log_buffer_latch);
+			page->LSN = LSN;
 			buf_return_page(l->table_id, l->pagenum, true, page->index);
 		}
 		
@@ -312,6 +318,9 @@ int trx_abort(int trx_id){
 		lock_release(temp);
 		
 	}
+	pthread_mutex_lock(log_buffer_latch);
+	log_write(ROLLBACK, trx_id, t->LSN, 0, NULL, 0 ,NULL, 0); 
+	pthread_mutex_unlock(log_buffer_latch);
 	pthread_mutex_unlock(lock_table_latch);
 	pthread_mutex_unlock(t->mutex);
 	index = trx_hash(trx_id);

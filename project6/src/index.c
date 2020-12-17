@@ -533,6 +533,7 @@ int find_record(int table_id, int64_t key, int trx_id, int lock_mode ,trxList *t
     	pthread_mutex_lock(lock_table_latch);
     	ret = lock_acquire(table_id, key, trx_id, lock_mode, lock_obj, t);
     	lock_obj->pointer->pagenum = page->mypage;
+    	lock_obj->prev_LSN = t->LSN;
     	pthread_mutex_unlock(lock_table_latch);
     	
     	if(ret == DEADLOCK){
@@ -547,11 +548,9 @@ int find_record(int table_id, int64_t key, int trx_id, int lock_mode ,trxList *t
 		pthread_mutex_unlock(trx_manager_latch);
 		
 		if(ret == ACQUIRED){
-			
-			
 			if(lock_mode == EXCLUSIVE){
 				pthread_mutex_lock(log_buffer_latch);
-				t->LSN = log_write(UPDATE, trx_id, t->LSN, table_id, page, i, str);
+				t->LSN = log_write(UPDATE, trx_id, t->LSN, table_id, page, i, str, 0);
 				page->LSN = t->LSN;
 				pthread_mutex_unlock(log_buffer_latch);
 				strncpy(lock_obj->stored, page->record[i]->value, VALUE_SIZE);
@@ -575,7 +574,7 @@ int find_record(int table_id, int64_t key, int trx_id, int lock_mode ,trxList *t
 			page = buf_read_page(table_id, pagenum);
 			if(lock_mode == EXCLUSIVE){
 				pthread_mutex_lock(log_buffer_latch);
-				t->LSN = log_write(UPDATE, trx_id, t->LSN, table_id, page, i, str);
+				t->LSN = log_write(UPDATE, trx_id, t->LSN, table_id, page, i, str, 0);
 				page->LSN = t->LSN;
 				pthread_mutex_unlock(log_buffer_latch);
 				strncpy(lock_obj->stored, page->record[i]->value, VALUE_SIZE);

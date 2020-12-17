@@ -115,7 +115,6 @@ int db_update(int table_id, int64_t key, char *values, int trx_id){
 		trx_abort(trx_id);
 		return -1;
 	}
-	
 	result = find_record(table_id, key, trx_id, EXCLUSIVE, t, values);
 	if(result == FAIL){
 		return -1;

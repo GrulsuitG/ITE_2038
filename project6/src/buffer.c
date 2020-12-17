@@ -44,7 +44,6 @@ page_t* buf_read_page(int table_id, pagenum_t pagenum){
 
 	if(index == -1){
 		index = find_empty(table_id, pagenum);
-	//	buf_clear(index);
 		file_read_page(table_id, pagenum, block[index]->frame);
 	}
 	//fprintf(fp,"mutex lock ");
@@ -130,7 +129,7 @@ int find_empty(int table_id, pagenum_t pagenum){
 		}
 		num = (num+1) % buf_size;
 	}
-
+	pthread_mutex_unlock(buffer_manager_latch);
 	return eviction();
 	
 }
@@ -157,30 +156,35 @@ int find_place(int table_id, pagenum_t pagenum){
 }
 
 int eviction(){
-	printf("eviction!\n");
 	int num = 0;
+	int table_id;
+	pagenum_t pagenum;
 	page_t *page;
 	tail = head->next;
-	pthread_mutex_unlock(buffer_manager_latch);
 	while(true){
 		if(tail->ref_bit == false ){
 				if(pthread_mutex_trylock(tail->page_latch)){
+					pthread_mutex_lock(buffer_manager_latch);
+					table_id = tail->table_id;
+					pagenum = tail->pagenum;
 					pthread_mutex_lock(log_buffer_latch);
 					logbuf_flush();
 					pthread_mutex_unlock(log_buffer_latch);
 					if(tail->is_dirty){
-						page = (page_t*)tail->frame;
-						if(tail->pagenum ==0){
+						page = tail->frame;
+						if(tail->pagenum == 0){
 							file_write_root(tail->table_id, page->rootPageNum);
 						}
 						else{
 							file_write_page(tail->table_id, tail->pagenum, page);
 						}
 					}
-					buf_clear(tail->id);
-					head = tail;
+					
 					pthread_mutex_unlock(tail->page_latch);
-					return find_place(tail->table_id, tail->pagenum);
+					head = tail;
+					pthread_mutex_unlock(buffer_manager_latch);
+					
+					return find_place(table_id, pagenum);
 				}
 			
 		}
@@ -194,10 +198,6 @@ int eviction(){
 		}
 	}
 	
-}
-
-void indexbuf_flush(){
-
 }
 
 int buf_close(int table_id){

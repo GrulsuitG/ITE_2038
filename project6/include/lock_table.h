@@ -37,6 +37,7 @@ struct lock_t {
 
 	int lock_mode;
 	int trx_id;
+	uint64_t prev_LSN;
 	lock_t *trx_next;
 };
 

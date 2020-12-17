@@ -39,21 +39,27 @@ void* func(void *arg){
 	trx_commit(num);
 }
 int main(){
-	int num, choice;
+	int num, choice, a;
 	srand(time(0));
 	init_db(10, 0, 0, "logfile.data", "logmsg.txt");
 	open_table("DATA2");
-	for(int i=0; i<10; i++){
+	for(int i=0; i<20; i++){
+
 		num = trx_begin();
-		choice = rand() %2;
-		db_update(2,i, "Hello", num);
-		if(choice ==1){	
-			printf("%d\n", num);
+		a = (i+1);
+		choice = rand() %3;
+		db_update(2,a, "Hello", num);
+		if(choice == 0){	
+			printf("%d commit\n", num);
 			trx_commit(num);
 		}
+		else if(choice ==1){
+			printf("%d abort\n", num);
+			trx_abort(num);
+		}
+		
 	}
 	logbuf_flush();
-	shutdown_db();
 }
 
 

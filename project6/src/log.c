@@ -12,34 +12,39 @@ void init_log(){
 }
 
 void recovery(int flag, int log_num, char* log_path, char* logmsg_path){
-	int *loser;
+	int *loser = (int*)malloc(sizeof(int) * LOSER_SIZE);
+	int i, trxnum;
+	log_record **log;
 	if(open_log(log_path, logmsg_path)){
-		loser = analysis();
+		trxnum = analysis(loser);
+		log = (log_record**)malloc(sizeof(log_record**)*(trxnum+1));
 		if(flag == NORMAL){
-			redo(0);
-			undo(0, loser);
+			redo(0, log);
+			undo(0, loser, log, trxnum);
 			truncate(log_path, 0);
 			lseek(fd_log_path,0, SEEK_SET);
 		}
 		if(flag == REDO_CRASH){
-			redo(log_num);
-			indexbuf_flush();
-			
+			redo(log_num, log);
+						
 		}
 		else if(flag == UNDO_CRASH){
-			redo(0);
-			undo(log_num, loser);
-			logbuf_flush();
+			redo(0, log);
+			undo(log_num, loser, log, trxnum);
+			
 		}
-		
+		logbuf_flush();
+		for(i=1;i<=10; i++){
+			close_table(i);
+		}
+		free(log);
 	}
-	
+	free(loser);
 	
 }
 
-int* analysis(){
+int analysis(int* loser){
 	int *winner = (int*)malloc(sizeof(int) * WINNER_SIZE);
-	int *loser = (int*)malloc(sizeof(int) * LOSER_SIZE);
 	int winnum =0, losenum =0;
 	int winnersize, losersize;
 	int size, type, trx_id;
@@ -62,7 +67,7 @@ int* analysis(){
 				winner = (int*)realloc(winner, (winnersize*WINNER_SIZE)*sizeof(int));
 			}
 		}
-		else if (type == COMMIT){
+		else if (type == COMMIT || type == ROLLBACK){
 			loser[losenum++] = trx_id;
 			if(losenum == (losersize*LOSER_SIZE)){
 				losersize++;
@@ -105,16 +110,18 @@ int* analysis(){
 	fprintf(logmsg,"\n");
 	free(winner);
 	free(temp);
-	return loser;
+	return winnum;
 }
 
-void redo(int log_num){
+void redo(int log_num, log_record** log){
 	int type, trx_id, size, redo_num;
 	int table_id, offset, index;
-	uint64_t LSN, next_undo;
+	uint64_t LSN, prev_LSN,next_undo;
 	pagenum_t pagenum;
 	page_t *page;
-	char data[VALUE_SIZE];
+	char new_data[VALUE_SIZE];
+	char old_data[VALUE_SIZE];
+	log_record* temp;
 	char *str = (char*) malloc(sizeof(char) * 10);
 	redo_num =1;
 	fprintf(logmsg,"[REDO] Redo pass start\n");
@@ -123,7 +130,7 @@ void redo(int log_num){
 	
 	while(read(fd_log_path, &size, sizeof(int)) > 0){
 		read(fd_log_path, &LSN, sizeof(uint64_t));
-		lseek(fd_log_path, 8, SEEK_CUR);
+		read(fd_log_path, &prev_LSN, sizeof(uint64_t));
 		read(fd_log_path, &trx_id, sizeof(int));
 		read(fd_log_path, &type, sizeof(int));
 		if(type == BEGIN){
@@ -134,48 +141,105 @@ void redo(int log_num){
 			fprintf(logmsg,"LSN %lu [COMMIT] Transaction id %d\n", LSN+size, trx_id);
 			
 		}
-		else if (type == UPDATE){
-
+		else if (type == UPDATE || type == COMPENSATE){
 			read(fd_log_path, &table_id, sizeof(int));
 			read(fd_log_path, &pagenum, sizeof(pagenum_t));
 			read(fd_log_path, &offset, sizeof(int));
-			lseek(fd_log_path,sizeof(int)+VALUE_SIZE,SEEK_CUR);
-			read(fd_log_path, data, VALUE_SIZE);
+			lseek(fd_log_path,sizeof(int),SEEK_CUR);
+			read(fd_log_path, old_data, VALUE_SIZE);
+			read(fd_log_path, new_data, VALUE_SIZE);
+			if(type == COMPENSATE)
+				read(fd_log_path, &next_undo, sizeof(uint64_t));
+			
 			sprintf(str, "DATA%d",table_id);
 			open_table(str);
 			page= buf_read_page(table_id, pagenum);
-			if(page->LSN >= LSN+size){
-				//printf("%lu %lu\n", page->LSN, LSN+size);
+			
+			if(page->LSN >= LSN){
 				buf_return_page(table_id, pagenum, false, page->index);	
 				fprintf(logmsg, "LSN %lu [CONSIDER_REDO] Transaction id %d\n", LSN+size, trx_id);
 			}
 			else{
+				temp = (log_record*)malloc(sizeof(log_record));
+				if(type == UPDATE)
+					temp->log_size = UPDATE_SIZE;
+				else if(type == COMPENSATE)
+					temp->log_size = COMPENSATE_SIZE;
+				temp->LSN = LSN;
+				temp->prev_LSN = prev_LSN;
+				temp->trx_id = trx_id;
+				temp->type = UPDATE;
+				temp->table_id = table_id;
+				temp->pagenum = pagenum;
+				temp->offset = offset;
+				temp->data_length = VALUE_SIZE;
+				strncpy(temp->old_data, old_data, VALUE_SIZE);
+				strncpy(temp->new_data, new_data, VALUE_SIZE);
+				
+				if(type == COMPENSATE)
+					temp->next_undo = next_undo;
+					
+				temp->next = log[trx_id];
+				log[trx_id] = temp;
 				
 				index = (offset % PAGE_SIZE) / 128;
-				strncpy(page->record[index-1]->value, data, VALUE_SIZE);
-				page->LSN = LSN+size;
+				strncpy(page->record[index-1]->value, new_data, VALUE_SIZE);
+				page->LSN = LSN;
 				buf_return_page(table_id, pagenum, true, page->index);
-				fprintf(logmsg, "LSN %lu [UPDATE] Transaction id %d redo apply\n", LSN+size, trx_id);
+				if(type == UPDATE)
+					fprintf(logmsg, "LSN %lu [UPDATE] Transaction id %d redo apply\n", LSN+size, trx_id);
+				else if(type == COMPENSATE)
+					fprintf(logmsg, "LSN %lu [CLR] next undo lsn %lu\n", LSN+size, next_undo);
 			}
-			buf_return_page(table_id, pagenum, false, page->index);
 		}
 		else if (type == ROLLBACK){
 			fprintf(logmsg, "LSN %lu [ROLLBACK] Transaction id %d\n", LSN+size, trx_id);
 		}
-		else if (type == COMPENSATE){
-			fprintf(logmsg, "LSN %lu [CLR] next undo lsn %lu", LSN+size, next_undo);
-		}
+		
+		
 		if(redo_num++ == log_num){
 			return;
 		}
 	}
-	
+	log_head->LSN = LSN;
+	log_head->log_size = size;
 	fprintf(logmsg, "[REDO] Redo pass end\n");
-	
 }
 
-void undo(int log_num, int *loser){
-
+void undo(int log_num, int *loser, log_record** log, int trxnum){
+	int trx,i, index,num =1;
+	log_record* cur;
+	page_t* page;
+	uint64_t LSN;
+	fprintf(logmsg, "[UNDO] Undo pass start\n");
+	for(i=trxnum; i>0; i--){
+		if(loser[i] != 0){
+			trx = loser[i];
+			cur = log[trx];
+			while(cur){
+				if(cur->type == UPDATE){
+					page= buf_read_page(cur->table_id, cur->pagenum);
+					index = (cur->offset % PAGE_SIZE) / 128;
+					log_write(COMPENSATE, cur->trx_id, cur->LSN, cur->table_id, page,index-1, cur->new_data, cur->prev_LSN);
+					strncpy(page->record[index-1]->value, cur->old_data, VALUE_SIZE);
+					buf_return_page(cur->table_id, cur->pagenum, true, page->index);
+					fprintf(logmsg, "LSN %lu [UPDATE] Transaction id %d undo apply\n", cur->LSN+cur->log_size, cur->trx_id); 
+					cur = cur->next;
+				}
+				else if(cur->type == COMPENSATE){
+					LSN = cur->next_undo;
+					while(cur && cur->LSN == LSN)
+						cur = cur->next;
+				}
+				else{
+					cur = cur->next;
+				}
+				if(log_num == num++)
+					return;
+			}
+		}
+	}
+	fprintf(logmsg, "[UNDO] undo pass end\n");
 }
 
 bool open_log(char* log_path, char* logmsg_path){
@@ -202,8 +266,9 @@ bool open_log(char* log_path, char* logmsg_path){
 	}
 }
 
-int log_write(int type, int trx_id, uint64_t prev, int table_id ,page_t* page, int index, char* value){
+int log_write(int type, int trx_id, uint64_t prev, int table_id ,page_t* page, int index, char* value, uint64_t next){
 	log_record* r = (log_record*)malloc(sizeof(log_record));
+	log_record* temp;
 	r->next = NULL;
 	int offset;
 		
@@ -214,19 +279,25 @@ int log_write(int type, int trx_id, uint64_t prev, int table_id ,page_t* page, i
 	
 	if(type == BEGIN || type == COMMIT || type == ROLLBACK)
 		r->log_size = DEFAULT_SIZE;
-	else if (type == UPDATE){
-		r->log_size = UPDATE_SIZE;
+	else if (type == UPDATE || type == COMPENSATE){
 		r->table_id = table_id;
 		r->pagenum = page->mypage;
 		offset = page->mypage*PAGE_SIZE + 128*(index+1);
 		r->offset = offset;
 		r->data_length = VALUE_SIZE;
-		strncpy(r->old_data, page->record[index]->value, VALUE_SIZE);
-		strncpy(r->new_data, value, VALUE_SIZE);
-	}/*
-	else if(type == COMPENSATE){	 
-		log_buf[log_num]->log_size = COMPENSATESIZE;
-	}*/
+		
+		if(type == UPDATE){
+			r->log_size = UPDATE_SIZE;
+			strncpy(r->old_data, page->record[index]->value, VALUE_SIZE);
+			strncpy(r->new_data, value, VALUE_SIZE);
+		}
+ 		else if(type == COMPENSATE){
+ 			r->log_size = COMPENSATE_SIZE;	 
+			strncpy(r->old_data, value, VALUE_SIZE);
+			strncpy(r->new_data, page->record[index]->value, VALUE_SIZE);
+			r->next_undo = next;
+		}
+	}
 
 	log_tail->next = r;
 	log_tail = r;
@@ -240,22 +311,22 @@ void logbuf_flush(){
 	
 	while(r != NULL){
 		type = r->type;
-		write(fd_log_path , &r->log_size , sizeof(int));
-		write(fd_log_path , &r->LSN , sizeof(uint64_t));
-		write(fd_log_path , &r->prev_LSN , sizeof(uint64_t));
-		write(fd_log_path , &r->trx_id , sizeof(int));
-		write(fd_log_path , &r->type , sizeof(int));
-		if(type == UPDATE){
-			write(fd_log_path , &r->table_id , sizeof(int));
-			write(fd_log_path , &r->pagenum , sizeof(pagenum_t));
-			write(fd_log_path , &r->offset , sizeof(int));
-			write(fd_log_path , &r->data_length , sizeof(int));
-			write(fd_log_path , r->old_data , VALUE_SIZE);
-			write(fd_log_path , r->new_data , VALUE_SIZE);
+		write(fd_log_path, &r->log_size, sizeof(int));
+		write(fd_log_path, &r->LSN, sizeof(uint64_t));
+		write(fd_log_path, &r->prev_LSN, sizeof(uint64_t));
+		write(fd_log_path, &r->trx_id, sizeof(int));
+		write(fd_log_path, &r->type, sizeof(int));
+		if(type == UPDATE || type == COMPENSATE){
+			write(fd_log_path, &r->table_id, sizeof(int));
+			write(fd_log_path, &r->pagenum, sizeof(pagenum_t));
+			write(fd_log_path, &r->offset, sizeof(int));
+			write(fd_log_path, &r->data_length, sizeof(int));
+			write(fd_log_path, r->old_data, VALUE_SIZE);
+			write(fd_log_path, r->new_data, VALUE_SIZE);
+			if(type == COMPENSATE)
+				write(fd_log_path, &r->next_undo, sizeof(uint64_t));
 		}
-		else if(type == COMPENSATE){
-			write(fd_log_path, r, COMPENSATE_SIZE);
-		}
+
 		if(r->next == NULL){
 			log_head = r;
 			log_tail = r;

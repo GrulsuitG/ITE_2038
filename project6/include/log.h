@@ -55,12 +55,12 @@ void init_log();
 
 void recovery(int flag, int log_num, char* log_path, char* logmsg_path);
 
-int* analysis();
-void redo(int log_num);
-void undo(int log_num, int *loser);
+int analysis(int* loser);
+void redo(int log_num, log_record** log);
+void undo(int log_num, int *loser, log_record** log, int trxnum);
 bool open_log(char* log_path, char* logmsg_path);
 
-int log_write(int type, int trx_id, uint64_t prev, int table_id ,page_t* page, int index, char* value);
+int log_write(int type, int trx_id, uint64_t prev, int table_id ,page_t* page, int index, char* value, uint64_t next);
 void logbuf_flush();
 
 #endif //__LOG_H__
