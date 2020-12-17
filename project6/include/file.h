@@ -11,7 +11,7 @@
 #define INTERNAL_ORDER 249
 #endif
 
-#define MAX_TABLE_NUM 10
+#define MAX_TABLE_NUM 11
 
 
 #include<stdio.h>

@@ -40,13 +40,14 @@ int buf_open(int table_id, char* filename){
 }
 
 page_t* buf_read_page(int table_id, pagenum_t pagenum){
+	pthread_mutex_lock(buffer_manager_latch);
 	int index = find_place(table_id, pagenum);
 
 	if(index == -1){
 		index = find_empty(table_id, pagenum);
 		file_read_page(table_id, pagenum, block[index]->frame);
 	}
-	
+	pthread_mutex_unlock(buffer_manager_latch);
 	pthread_mutex_lock(block[index]->page_latch);
 	
 	block[index]->frame->index = index;
@@ -61,22 +62,25 @@ page_t* buf_read_page(int table_id, pagenum_t pagenum){
 }
 
 void buf_return_page(int table_id, pagenum_t pagenum,  bool is_dirty, int index){
+	pthread_mutex_lock(buffer_manager_latch);
 	if(is_dirty)
 		block[index] -> is_dirty = is_dirty;
 	block[index] -> ref_bit = true;
 	head = block[index];
 	pthread_mutex_unlock(block[index]->page_latch);
-	
+	pthread_mutex_unlock(buffer_manager_latch);
 	return;
 }
 
 page_t* buf_alloc_page(int table_id){
+	pthread_mutex_lock(buffer_manager_latch);
 	pagenum_t pagenum = file_alloc_page(table_id);
 	int index = find_place(table_id, pagenum);
 	if(index == -1){
 		index = find_empty(table_id, pagenum);
 	}
 	//fprintf(fp,"mutex lock ");
+	pthread_mutex_unlock(buffer_manager_latch);
 	pthread_mutex_lock(block[index]->page_latch);
 	//fprintf(fp, "%d\n", index);
 	
@@ -104,45 +108,37 @@ void buf_free_page(int table_id, pagenum_t pagenum, int index){
 
 
 int find_empty(int table_id, pagenum_t pagenum){
-	pthread_mutex_lock(buffer_manager_latch);
 	int num = (table_id+11*pagenum)%buf_size;
 	int flag =num;
 	if(block[num]->table_id == 0){
-		pthread_mutex_unlock(buffer_manager_latch);
 		return num;
 	}
 	num = (num+1) % buf_size;
 	
 	while(num != flag){
 		if(block[num]->table_id ==0){
-			pthread_mutex_unlock(buffer_manager_latch);
 			return num;
 		}
 		num = (num+1) % buf_size;
 	}
-	pthread_mutex_unlock(buffer_manager_latch);
 	return eviction();
 	
 }
 
 int find_place(int table_id, pagenum_t pagenum){
-	pthread_mutex_lock(buffer_manager_latch);
 	int num = (table_id+11*pagenum)% buf_size;
 	int flag =num;
 	if(block[num]->table_id == table_id && block[num]->pagenum == pagenum){
-		pthread_mutex_unlock(buffer_manager_latch);
 		return num;
 	}
 	
 	num = (num+1) % buf_size;
 	while(num != flag){
 		if(block[num]->table_id == table_id && block[num]-> pagenum == pagenum){
-			pthread_mutex_unlock(buffer_manager_latch);
 			return num;
 		}
 		num = (num+1) % buf_size;
 	}
-	pthread_mutex_unlock(buffer_manager_latch);
 	return -1;
 }
 
@@ -152,10 +148,10 @@ int eviction(){
 	pagenum_t pagenum;
 	page_t *page;
 	tail = head->next;
+	pthread_mutex_unlock(buffer_manager_latch);
 	while(true){
 		if(tail->ref_bit == false ){
 			if(pthread_mutex_trylock(tail->page_latch) == 0){
-				
 				table_id = tail->table_id;
 				pagenum = tail->pagenum;
 				pthread_mutex_lock(log_buffer_latch);
@@ -172,6 +168,7 @@ int eviction(){
 				}
 				pthread_mutex_unlock(tail->page_latch);
 				head = tail;
+				pthread_mutex_lock(buffer_manager_latch);
 				return tail->id;
 			}
 		}

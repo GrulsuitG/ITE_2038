@@ -4,23 +4,13 @@
 pagenum_t file_alloc_page(int table_id){
 	pagenum_t pagenum, num;
 	page_t* header=init_page();
-	//char* filename = tableList[table_id-1].name;
-	int fd = fdList[table_id-1];
+	int fd = fdList[table_id];
 	pagenum_t read_info;
 	file_read_page(table_id, 0,header);
-	/*if((fd=open(filename, O_RDWR|O_SYNC)) <0){
-	    perror("file open error for alloc");
-		exit(EXIT_FAILURE);
-	}*/
+
 	if(header->freePageNum == 0){
-	
 		pagenum = header->numOfPage;
 
-        // file size up
-		/*if(truncate(filename,PAGE_SIZE*(header->numOfPage+DEFAULT_FREE_PAGE))<0){
-            perror("file truncate error for alloc");
-            exit(EXIT_FAILURE);
-        }*/
 		//write next free page num at new pages
 		for(int i =1 ; i<DEFAULT_FREE_PAGE; i++){
 			lseek(fd, PAGE_SIZE*pagenum, SEEK_SET);
@@ -78,7 +68,7 @@ pagenum_t file_alloc_page(int table_id){
 }
 
 void file_free_page(int table_id, pagenum_t pagenum){
-	int fd = fdList[table_id-1];
+	int fd = fdList[table_id];
     pagenum_t read_info;
 	/*char* filename = tableList[table_id-1].name;
 	if((fd = open(filename, O_RDWR)) < 0){
@@ -116,7 +106,7 @@ void file_free_page(int table_id, pagenum_t pagenum){
 }
 
 void file_read_page(int table_id, pagenum_t pagenum, page_t* dest){
-	int fd = fdList[table_id-1];
+	int fd = fdList[table_id];
 	/*char* filename = tableList[table_id-1].name;
 	
 	if((fd = open(filename, O_RDONLY)) < 0){
@@ -188,7 +178,7 @@ void file_read_page(int table_id, pagenum_t pagenum, page_t* dest){
                  }
 				
 				
-				if(read(fd, dest->record[i]->value, sizeof(char)*VALUE_SIZE) < 0){
+				if(read(fd, dest->record[i]->value, VALUE_SIZE) < 0){
 					perror("file read error 9 for read");
 					exit(EXIT_FAILURE);
 				}
@@ -218,7 +208,7 @@ void file_read_page(int table_id, pagenum_t pagenum, page_t* dest){
 
 
 void file_write_page(int table_id, pagenum_t pagenum, const page_t* src){
-	int fd = fdList[table_id-1];
+	int fd = fdList[table_id];
 	/*char* filename = tableList[table_id-1].name;
 
 	if((fd=open(filename, O_WRONLY)) < 0){
@@ -302,7 +292,7 @@ void file_write_page(int table_id, pagenum_t pagenum, const page_t* src){
 }
 
 void file_write_root(int table_id, pagenum_t pagenum){
-	int fd = fdList[table_id-1];
+	int fd = fdList[table_id];
 	
 	/*char* filename = tableList[table_id-1].name;
 	if((fd=open(filename, O_WRONLY)) < 0){
@@ -379,19 +369,19 @@ int file_open(int table_id, char* filename){
 	int isExist;
 	isExist = access(filename, 00);
 	if (isExist != -1){
-		if((fdList[table_id-1] = open(filename, O_RDWR | O_SYNC)) < 0){
+		if((fdList[table_id] = open(filename, O_RDWR | O_SYNC)) < 0){
 			perror("file open error for read");
 			exit(EXIT_FAILURE);
 		}
 	}
 	else{
-		fdList[table_id-1] = make_file(filename);
+		fdList[table_id] = make_file(filename);
 	}
-	return fdList[table_id-1];
+	return fdList[table_id];
 }
 
 int file_close(int table_id){
-	close(fdList[table_id-1]);
+	close(fdList[table_id]);
 	return 0;
 }
 
@@ -399,7 +389,7 @@ int* get_freelist(int table_id){
 	page_t *header=init_page();
 	pagenum_t pagenum;
 	//char* filename = tableList[table_id-1].name;
-	int fd = fdList[table_id-1];
+	int fd = fdList[table_id];
 	int *list;
 	
 	file_read_page(table_id, 0, header);

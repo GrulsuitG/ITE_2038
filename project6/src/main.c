@@ -21,14 +21,15 @@ void* find_func(void *arg){
 	char * value = malloc(120);
 	int num = trx_begin();
 	int id, s;
-	for(int i=0; i<100; i++){
-		s = rand() %100;
-		//lock_acquire(1, s, num, 0);
-		db_find(1,s,value,num);
-		//printf("%s\n", value);
+	for(int i=0; i<10; i++){
+		s = rand() %1000;
+		db_update(2,s, "Hello", num);
 		
 	}
-	trx_commit(num);
+	if(s %2 ==0)
+		trx_commit(num);
+	else
+		trx_abort(num);
 }
 void* func(void *arg){
 	char * value =malloc(120);
@@ -43,6 +44,7 @@ int main(){
 	srand(time(0));
 	init_db(10, 0, 0, "logfile.data", "logmsg.txt");
 	open_table("DATA2");
+	pthread_t aa[THREAD_NUM];
 	for(int i=0; i<20; i++){
 
 		num = trx_begin();

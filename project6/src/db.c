@@ -9,7 +9,7 @@ int init_db(int num_buf, int flag, int log_num, char* log_path, char* logmsg_pat
 		return -1;
 	if(index_init(num_buf))
 		return -1;
-	for(i =0; i< MAX_TABLE_NUM; i++)
+	for(i =1; i<= MAX_TABLE_NUM; i++)
 		tableList[i].is_open = false;
 	init = true;
 	init_trx();
@@ -34,11 +34,11 @@ int open_table(char* pathname){
 	if(id >10 || id<1){
 		return -1;
 	}
-	if(tableList[id-1].is_open)
+	if(tableList[id].is_open)
 		return id;
 	else{
-		tableList[id-1].fd = index_open(id, pathname);
-		tableList[id-1].is_open = true;
+		tableList[id].fd = index_open(id, pathname);
+		tableList[id].is_open = true;
 		return id;
 	}
 
@@ -49,7 +49,7 @@ int db_insert(int table_id, int64_t key, char* value){
   	if(!init){
 		return -1;
   	}
-  	if(!tableList[table_id-1].is_open){
+  	if(!tableList[table_id].is_open){
 		return -1;
 	}
   	pagenum_t root;
@@ -65,7 +65,7 @@ int db_delete(int table_id, int64_t key){
 	if(!init)
 		return -1;
   	
-  	if(!tableList[table_id-1].is_open){
+  	if(!tableList[table_id].is_open){
 		return -1;
 	}
    	
@@ -84,7 +84,7 @@ int db_find(int table_id, int64_t key, char *ret_val, int trx_id){
 	int result;
 	
 
-  	if(!init || !tableList[table_id-1].is_open){
+  	if(!init || !tableList[table_id].is_open){
 		trx_abort(trx_id);
 		return -1;
 	}
@@ -105,7 +105,7 @@ int db_update(int table_id, int64_t key, char *values, int trx_id){
 	trxList* t;
 	int result;
 	
-  	if(!init || !tableList[table_id-1].is_open){
+  	if(!init || !tableList[table_id].is_open){
 		trx_abort(trx_id);
 		return -1;
 	}
@@ -129,12 +129,12 @@ int close_table(int table_id){
 	if(table_id < 1 || table_id >10){
 		return -1;
 	}
-	if(tableList[table_id-1].is_open){
+	if(tableList[table_id].is_open){
 		if(index_close(table_id)){
 			return -1;
 		}
 		else{
-			tableList[table_id-1].is_open = false;
+			tableList[table_id].is_open = false;
 			return 0;
 		}
 	}
@@ -143,9 +143,9 @@ int close_table(int table_id){
 
 int shutdown_db(){
 	int i ;
-	for(i = 0; i< MAX_TABLE_NUM; i++){
+	for(i = 1; i<= MAX_TABLE_NUM; i++){
 		if(tableList[i].is_open){
-			if(close_table(i+1)){
+			if(close_table(i)){
 				return -1;
 			}
 		}

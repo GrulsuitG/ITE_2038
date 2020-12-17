@@ -22,8 +22,8 @@
 #define COMPENSATE 4
 
 #define LOG_BUFFER_SIZE 100
-#define WINNER_SIZE 100
-#define LOSER_SIZE 100
+#define WINNER_SIZE 10000
+#define LOSER_SIZE 10000
 typedef struct log_record{
 	int log_size;
 	uint64_t LSN;

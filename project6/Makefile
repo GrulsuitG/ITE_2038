@@ -10,8 +10,8 @@ LIBS=lib/
 # OBJS:=$(SRCS:.c=.o)
 
 # main source file
-TARGET_SRC:=$(SRCDIR)main.c
-TARGET_OBJ:=$(SRCDIR)main.o
+TARGET_SRC:=$(SRCDIR)test.c
+TARGET_OBJ:=$(SRCDIR)test.o
 STATIC_LIB:=$(LIBS)libbpt.a
 
 # Include more files if you write another source file.
@@ -43,7 +43,7 @@ clean:
 	rm $(TARGET) $(TARGET_OBJ) $(OBJS_FOR_LIB) $(LIBS)*
 
 d:
-	rm DATA00.db log.txt
+	rm DATA1 DATA2 DATA3 DATA4 DATA5
 
 $(STATIC_LIB): $(OBJS_FOR_LIB)
 	ar cr $@ $^

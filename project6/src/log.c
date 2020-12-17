@@ -17,12 +17,13 @@ void recovery(int flag, int log_num, char* log_path, char* logmsg_path){
 	log_record **log;
 	if(open_log(log_path, logmsg_path)){
 		trxnum = analysis(loser);
-		log = (log_record**)malloc(sizeof(log_record**)*(trxnum+1));
+		log = (log_record**)malloc(sizeof(log_record*)*(trxnum+1));
 		if(flag == NORMAL){
 			redo(0, log);
 			undo(0, loser, log, trxnum);
-			truncate(log_path, 0);
 			lseek(fd_log_path,0, SEEK_SET);
+			truncate(log_path, 0);
+			
 		}
 		if(flag == REDO_CRASH){
 			redo(log_num, log);
@@ -48,7 +49,7 @@ void recovery(int flag, int log_num, char* log_path, char* logmsg_path){
 
 int analysis(int* loser){
 	int *winner = (int*)malloc(sizeof(int) * WINNER_SIZE);
-	int winnum =0, losenum =0;
+	int winnum =0, losenum =0, tempnum=0;
 	int winnersize, losersize;
 	int size, type, trx_id;
 	int i,j, flag;
@@ -58,7 +59,7 @@ int analysis(int* loser){
 	fprintf(logmsg,"[ANALYSIS] Analysis pass start\n");
 	
 	lseek(fd_log_path, 0, SEEK_SET);
-	
+	temp = (int*)malloc(sizeof(int)*winnersize*WINNER_SIZE); 
 	while(read(fd_log_path, &size, sizeof(int)) > 0){
 		lseek(fd_log_path, 16, SEEK_CUR);
 		read(fd_log_path, &trx_id, sizeof(int));
@@ -68,35 +69,34 @@ int analysis(int* loser){
 			if(winnum ==(winnersize*WINNER_SIZE)){
 				winnersize++;
 				winner = (int*)realloc(winner, (winnersize*WINNER_SIZE)*sizeof(int));
+				losersize++;
+				temp = (int*)realloc(temp, (losersize*LOSER_SIZE)*sizeof(int));
 			}
 		}
 		else if (type == COMMIT || type == ROLLBACK){
-			loser[losenum++] = trx_id;
-			if(losenum == (losersize*LOSER_SIZE)){
+			temp[tempnum++] = trx_id;
+			if(tempnum == (losersize*LOSER_SIZE)){
+				winnersize++;
+				winner = (int*)realloc(winner, (winnersize*WINNER_SIZE)*sizeof(int));
 				losersize++;
-				loser = (int*)realloc(loser, (losersize*LOSER_SIZE)*sizeof(int));
+				temp = (int*)realloc(temp, (losersize*LOSER_SIZE)*sizeof(int));
 			}
 		}
 		lseek(fd_log_path, size-DEFAULT_SIZE, SEEK_CUR);
 	}
-	temp = (int*)malloc(sizeof(int)*winnersize*WINNER_SIZE); 
+	
 	for(i=0; i<winnum; i++){
 		flag =0;
-		for(j=0; j<losenum; j++){
-			if(winner[i] == loser[j]){
-				loser[j] = 0;
+		for(j=0; j<tempnum; j++){
+			if(winner[i] == temp[j]){
 				flag = 1;
 				break;
 			}
 		}
 		if(flag ==0){
-			temp[i] = winner[i];
+			loser[losenum++] = winner[i];
 			winner[i] = 0;
 		}
-	}
-	for(i=0; i<winnum; i++){
-		if(temp[i] !=0)
-			loser[losenum++] = temp[i]; 
 	}
 	fprintf(logmsg, "[ANALYSIS] Analysis success. Winner: ");
 	for(i=0; i<winnersize*WINNER_SIZE; i++){
@@ -178,7 +178,6 @@ void redo(int log_num, log_record** log){
 				temp->data_length = VALUE_SIZE;
 				strncpy(temp->old_data, old_data, VALUE_SIZE);
 				strncpy(temp->new_data, new_data, VALUE_SIZE);
-				
 				if(type == COMPENSATE)
 					temp->next_undo = next_undo;
 					
@@ -215,7 +214,7 @@ void undo(int log_num, int *loser, log_record** log, int trxnum){
 	page_t* page;
 	uint64_t LSN;
 	fprintf(logmsg, "[UNDO] Undo pass start\n");
-	for(i=trxnum; i>0; i--){
+	/*for(i=trxnum; i>0; i--){
 		if(loser[i] != 0){
 			trx = loser[i];
 			cur = log[trx];
@@ -241,7 +240,7 @@ void undo(int log_num, int *loser, log_record** log, int trxnum){
 					return;
 			}
 		}
-	}
+	}*/
 	fprintf(logmsg, "[UNDO] undo pass end\n");
 }
 

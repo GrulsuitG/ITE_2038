@@ -318,10 +318,10 @@ int trx_abort(int trx_id){
 		lock_release(temp);
 		
 	}
+	pthread_mutex_unlock(lock_table_latch);
 	pthread_mutex_lock(log_buffer_latch);
 	log_write(ROLLBACK, trx_id, t->LSN, 0, NULL, 0 ,NULL, 0); 
 	pthread_mutex_unlock(log_buffer_latch);
-	pthread_mutex_unlock(lock_table_latch);
 	pthread_mutex_unlock(t->mutex);
 	index = trx_hash(trx_id);
 	trx_hash_delete(index, t);

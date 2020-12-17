@@ -131,7 +131,11 @@ SST_func(void* args)
 			return NULL;
 		}
 
-		trx_commit(transaction_id);
+		ret = rand()%6;
+		if(ret == 0|| ret ==5) 
+			trx_commit(transaction_id);
+		if(ret == 1|| ret ==4)
+			trx_abort(transaction_id);
 	}
 
 	return NULL;
@@ -150,13 +154,13 @@ single_thread_test()
 	pthread_mutex_init(&SST_mutex, NULL);
 
 	/* Initiate database. */
-	init_db(DATABASE_BUFFER_SIZE);
+	init_db(DATABASE_BUFFER_SIZE,0,0,"logfile.data", "logmsg.txt" );
 
 	/* open table */
 	for (int i = 0; i < SST_TABLE_NUMBER; i++) {
 		char* str = (char*) malloc(sizeof(char) * 100);
 		TableId table_id;
-		sprintf(str, "DATA%02d.db", i);
+		sprintf(str, "DATA%d", i+1);
 		table_id = open_table(str);
 		table_id_array[i] = table_id;
 
@@ -287,7 +291,7 @@ slock_test()
 	pthread_mutex_init(&SLT_mutex, NULL);
 
 	/* Initiate database. */
-	init_db(DATABASE_BUFFER_SIZE);
+	init_db(DATABASE_BUFFER_SIZE,0,0,"logfile.data", "logmsg.txt" );
 
 	/* open table */
 	for (int i = 0; i < SLT_TABLE_NUMBER; i++) {
@@ -355,8 +359,8 @@ slock_test()
  */
 
 #define XLT_TABLE_NUMBER		(1)
-#define XLT_TABLE_SIZE			(100)
-#define XLT_THREAD_NUMBER		(10)
+#define XLT_TABLE_SIZE			(1000)
+#define XLT_THREAD_NUMBER		(5)
 
 #define XLT_UPDATE_NUMBER		(10)
 
@@ -407,7 +411,11 @@ XLT_func(void* args)
 		}
 
 		/* transaction commit */
-		trx_commit(transaction_id);
+		ret = rand()%6;
+		if(ret == 0|| ret ==5) 
+			trx_commit(transaction_id);
+		if(ret == 1|| ret ==4)
+			trx_abort(transaction_id);
 	}
 
 	return NULL;
@@ -426,13 +434,13 @@ xlock_test()
 	pthread_mutex_init(&XLT_mutex, NULL);
 
 	/* Initiate database. */
-	init_db(DATABASE_BUFFER_SIZE);
+	init_db(DATABASE_BUFFER_SIZE,0,0,"logfile.data", "logmsg.txt" );
 
 	/* open table */
-	for (int i = 0; i < XLT_TABLE_NUMBER; i++) {
+	for (int i = 1; i <= XLT_TABLE_NUMBER; i++) {
 		char* str = (char*) malloc(sizeof(char) * 100);
 		TableId table_id;
-		sprintf(str, "DATA%02d.db", i);
+		sprintf(str, "DATA%d", i);
 		table_id = open_table(str);
 		table_id_array[i] = table_id;
 
@@ -581,7 +589,7 @@ mlock_test()
 	pthread_mutex_init(&MLT_mutex, NULL);
 
 	/* Initiate database. */
-	init_db(DATABASE_BUFFER_SIZE);
+	init_db(DATABASE_BUFFER_SIZE,0,0,"logfile.data", "logmsg.txt" );
 
 	/* open table */
 	for (int i = 0; i < MLT_TABLE_NUMBER; i++) {
@@ -739,7 +747,7 @@ deadlock_test()
 	pthread_mutex_init(&DLT_mutex, NULL);
 
 	/* Initiate database. */
-	init_db(DATABASE_BUFFER_SIZE);
+	init_db(DATABASE_BUFFER_SIZE,0,0,"logfile.data", "logmsg.txt" );
 
 	/* open table */
 	for (int i = 0; i < DLT_TABLE_NUMBER; i++) {
@@ -800,7 +808,23 @@ deadlock_test()
 	shutdown_db();
 }
 
-
+void test(){
+	int id;	
+	init_db(DATABASE_BUFFER_SIZE,0,0,"logfile.data", "logmsg.txt" );
+	printf("%d\n",open_table("DATA1"));
+	printf("%d\n",open_table("DATA2"));
+	printf("%d\n",open_table("DATA3"));
+	for(int i=0; i<1000; i++){
+		id = rand()%3 +1;
+		db_insert(id, i, "hello");
+	}
+	/*
+	printf("%d\n",open_table("DATA1"));
+	close_table(3);
+	printf("%d\n",open_table("DATA3"));*/
+	
+	shutdown_db();
+}
 
 
 
@@ -833,6 +857,9 @@ main(int argc, char* argv[])
 	}
 	if (strcmp("deadlock_test", argv[1]) == 0) {
 		deadlock_test();
+	}
+	if (strcmp("test", argv[1]) == 0){
+		test();
 	}
 
 	return 0;
